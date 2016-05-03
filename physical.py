@@ -18,26 +18,16 @@ class wxThread(threading.Thread):
         self.start_orig = self.start
         self.start = self.start_local
         self.frame = None #to be defined in self.run
-        self.lock = threading.Lock()
-        self.lock.acquire() #lock until variables are set
         if autoStart:
             self.start() #automatically start thread on init
     def run(self):
         # app = wx.PySimpleApp()
         app = RunDemoApp()
 
-        #define frame and release lock
-        #The lock is used to make sure that SetData is defined.
-
-        self.lock.release()
-
         app.MainLoop()
 
     def start_local(self):
         self.start_orig()
-        #After thread has started, wait until the lock is released
-        #before returning so that functions get defined.
-        self.lock.acquire()
 
 def runWxThread():
     """MainLoop run as a thread. SetData function is returned."""
