@@ -3,132 +3,14 @@ import wx
 import numpy
 import threading
 import time
+import sys
+import atexit
 
-_EVT_FRAME = wx.PyEventBinder(wx.NewEventType(), 0)
+from wx import glcanvas
+import OpenGL.GL as gl
+import OpenGL.GLUT as glut
 
-class ImageWindow(wx.Window):
-    def __init__(self, parent, id=-1, style=wx.FULL_REPAINT_ON_RESIZE):
-        wx.Window.__init__(self, parent, id, style=style)
-
-        self.timer = wx.Timer
-
-        self.img = wx.EmptyImage(2,2)
-        self.bmp = self.img.ConvertToBitmap()
-        self.clientSize = self.GetClientSize()
-
-        self.Bind(wx.EVT_PAINT, self.OnPaint)
-
-        #For video support
-        #------------------------------------------------------------
-        self.Bind(_EVT_FRAME, self.OnNewImage)
-        self.eventLock = None
-        self.pause = False
-        #------------------------------------------------------------
-
-    def OnPaint(self, event):
-        size = self.GetClientSize()
-        if (size == self.clientSize):
-            self.PaintBuffer()
-        else:
-            self.InitBuffer()
-
-    def PaintBuffer(self):
-        dc = wx.PaintDC(self)
-        self.Draw(dc)
-
-    def InitBuffer(self):
-        self.clientSize = self.GetClientSize()
-        self.bmp = self.img.Scale(self.clientSize[0], self.clientSize[1]).ConvertToBitmap()
-        dc = wx.ClientDC(self)
-        self.Draw(dc)
-
-    def Draw(self,dc):
-        dc.DrawBitmap(self.bmp,0,0)
-
-    def UpdateImage(self, img):
-        self.img = img
-        self.InitBuffer()
-
-    #For video support
-    #------------------------------------------------------------
-    def OnNewImage(self, event):
-        #print sys._getframe().f_code.co_name
-
-        """Update the image from event.img. The eventLock should be
-        locked by the method calling the event. If the stream is not
-        on pause, the eventLock is released for calling method so that
-        new image events may be called.
-
-        The method depends on the use of thread.allocate_lock. The
-        event must have the attributes, eventLock and oldImageLock
-        which are the lock objects."""
-
-        self.eventLock = event.eventLock
-
-        if not self.pause:
-            self.UpdateImage(event.img)
-            self.ReleaseEventLock()
-        if event.oldImageLock:
-            if event.oldImageLock.locked():
-                event.oldImageLock.release()
-
-    def ReleaseEventLock(self):
-        if self.eventLock:
-            if self.eventLock.locked():
-                self.eventLock.release()
-
-    def OnPause(self):
-        self.pause = not self.pause
-        #print "Pause State: " + str(self.pause)
-        if not self.pause:
-            self.ReleaseEventLock()
-    #------------------------------------------------------------
-
-#For video support
-#----------------------------------------------------------------------
-class ImageEvent(wx.PyCommandEvent):
-    def __init__(self, eventType=_EVT_FRAME.evtType[0], id=0):
-        wx.PyCommandEvent.__init__(self, eventType, id)
-        self.img = None
-        self.oldImageLock = None
-        self.eventLock = None
-#----------------------------------------------------------------------
-
-class ImageFrame(wx.Frame):
-    def __init__(self, parent):
-        wx.Frame.__init__(self, parent, -1, "Image Frame",
-                pos=(50,50),size=(640,480))
-        self.window = ImageWindow(self)
-        self.window.SetFocus()
-
-class ImageIn:
-    """Interface for sending images to the wx application."""
-    def __init__(self, parent):
-        self.parent = parent
-        self.eventLock = threading.Lock()
-
-    def SetData(self, arr):
-        #create a wx.Image from the array
-        h,w = arr.shape[0], arr.shape[1]
-
-        #Format numpy array data for use with wx Image in RGB
-        b = arr.copy()
-        b.shape = h, w, 1
-        bRGB = numpy.concatenate((b,b,b), axis=2)
-        data = bRGB.tostring()
-
-        img = wx.ImageFromBuffer(width=w, height=h, dataBuffer=data)
-
-        #Create the event
-        event = ImageEvent()
-        event.img = img
-        event.eventLock = self.eventLock
-
-        #Trigger the event when app releases the eventLock
-        event.eventLock.acquire() #wait until the event lock is released
-        self.parent.AddPendingEvent(event)
-
-class videoThread(threading.Thread):
+class wxThread(threading.Thread):
     """Run the MainLoop as a thread. Access the frame with self.frame."""
     def __init__(self, autoStart=True):
         threading.Thread.__init__(self)
@@ -141,14 +23,12 @@ class videoThread(threading.Thread):
         if autoStart:
             self.start() #automatically start thread on init
     def run(self):
-        app = wx.PySimpleApp()
-        frame = ImageFrame(None)
-        frame.SetSize((800, 600))
-        frame.Show(True)
+        # app = wx.PySimpleApp()
+        app = RunDemoApp()
 
         #define frame and release lock
         #The lock is used to make sure that SetData is defined.
-        self.frame = frame
+
         self.lock.release()
 
         app.MainLoop()
@@ -159,32 +39,156 @@ class videoThread(threading.Thread):
         #before returning so that functions get defined.
         self.lock.acquire()
 
-def runVideoThread():
+def runWxThread():
     """MainLoop run as a thread. SetData function is returned."""
 
-    vt = videoThread() #run wx MainLoop as thread
-    myImageIn = ImageIn(vt.frame.window) #data interface for image updates
-    return myImageIn.SetData
+    vt = wxThread() #run wx MainLoop as thread
 
-def vidSeq(SetData,loop=0):
-    """This is a simple test of the video interface. A 16x16 image is
-    created with a sweep of white pixels across each row."""
+    # The following enables the window to stay open after the user's
+    # program has completed.
+    def sleep_forever():
+        print('program complete, but still running visualization...')
+        while True:
+            time.sleep(60)
+    atexit.register(sleep_forever)
 
-    w,h = 16,16
-    arr = numpy.zeros((h,w), dtype=numpy.uint8)
-    i = 0
-    m = 0
-    while m < loop or loop==0:
-        print i
-        arr[i/h,i%w] = 255
-        h,w = arr.shape
-        SetData(arr)
-        time.sleep(0.1)
-        i += 1
-        if not (i < w*h):
-            arr = numpy.zeros((h,w), dtype=numpy.uint8)
-            i = 0
-            m += 1
+class MyCanvas(glcanvas.GLCanvas):
+    def __init__(self, parent):
+        glcanvas.GLCanvas.__init__(self, parent, -1)
+        self.init = False
+        self.context = glcanvas.GLContext(self)
 
-SetData = runVideoThread()
-vidSeq(SetData, loop=1)
+        # initial mouse position
+        self.lastx = self.x = 30
+        self.lasty = self.y = 30
+        self.size = None
+        self.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnMouseDown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnMouseUp)
+        self.Bind(wx.EVT_MOTION, self.OnMouseMotion)
+
+    def OnEraseBackground(self, event):
+        pass # Do nothing, to avoid flashing on MSW.
+
+    def OnSize(self, event):
+        wx.CallAfter(self.DoSetViewport)
+        event.Skip()
+
+    def DoSetViewport(self):
+        size = self.size = self.GetClientSize()
+        self.SetCurrent(self.context)
+        gl.glViewport(0, 0, size.width, size.height)
+
+    def OnPaint(self, event):
+        dc = wx.PaintDC(self)
+        self.SetCurrent(self.context)
+        if not self.init:
+            self.InitGL()
+            self.init = True
+        self.OnDraw()
+
+    def OnMouseDown(self, evt):
+        self.CaptureMouse()
+        self.x, self.y = self.lastx, self.lasty = evt.GetPosition()
+
+    def OnMouseUp(self, evt):
+        self.ReleaseMouse()
+
+    def OnMouseMotion(self, evt):
+        if evt.Dragging() and evt.LeftIsDown():
+            self.lastx, self.lasty = self.x, self.y
+            self.x, self.y = evt.GetPosition()
+            self.Refresh(False)
+
+    def InitGL( self ):
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        # camera frustrum setup
+        gl.glFrustum(-0.5, 0.5, -0.5, 0.5, 1.0, 3.0)
+        gl.glMaterial(gl.GL_FRONT, gl.GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])
+        gl.glMaterial(gl.GL_FRONT, gl.GL_DIFFUSE, [0.8, 0.8, 0.8, 1.0])
+        gl.glMaterial(gl.GL_FRONT, gl.GL_SPECULAR, [1.0, 0.0, 1.0, 1.0])
+        gl.glMaterial(gl.GL_FRONT, gl.GL_SHININESS, 50.0)
+        gl.glLight(gl.GL_LIGHT0, gl.GL_AMBIENT, [0.0, 1.0, 0.0, 1.0])
+        gl.glLight(gl.GL_LIGHT0, gl.GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
+        gl.glLight(gl.GL_LIGHT0, gl.GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
+        gl.glLight(gl.GL_LIGHT0, gl.GL_POSITION, [1.0, 1.0, 1.0, 0.0])
+        gl.glLightModelfv(gl.GL_LIGHT_MODEL_AMBIENT, [0.2, 0.2, 0.2, 1.0])
+        gl.glEnable(gl.GL_LIGHTING)
+        gl.glEnable(gl.GL_LIGHT0)
+        gl.glDepthFunc(gl.GL_LESS)
+        gl.glEnable(gl.GL_DEPTH_TEST)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        # position viewer
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        # position viewer
+        gl.glTranslatef(0.0, 0.0, -2.0);
+        #
+        glut.glutInit(sys.argv)
+
+
+    def OnDraw(self):
+        # clear color and depth buffers
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        # use a fresh transformation matrix
+        gl.glPushMatrix()
+        # position object
+        #gl.glTranslate(0.0, 0.0, -2.0)
+        gl.glRotate(30.0, 1.0, 0.0, 0.0)
+        gl.glRotate(30.0, 0.0, 1.0, 0.0)
+
+        gl.glTranslate(0, -1, 0)
+        gl.glRotate(250, 1, 0, 0)
+        glut.glutSolidCone(0.5, 1, 30, 5)
+        gl.glPopMatrix()
+        gl.glRotatef((self.y - self.lasty), 0.0, 0.0, 1.0);
+        gl.glRotatef((self.x - self.lastx), 1.0, 0.0, 0.0);
+        # push into visible buffer
+        self.SwapBuffers()
+
+def myFrame():
+    frame = wx.Frame(None, -1, "Physical Python", pos=(0,0),
+                     style=wx.DEFAULT_FRAME_STYLE, name="run simulation")
+    #frame.CreateStatusBar()
+
+    frame.Show(True)
+
+    win = MyCanvas(frame)
+    return frame
+
+#----------------------------------------------------------------------
+class RunDemoApp(wx.App):
+    def __init__(self):
+        wx.App.__init__(self, redirect=False)
+
+    def OnInit(self):
+        frame = wx.Frame(None, -1, "RunDemo: ", pos=(0,0),
+                        style=wx.DEFAULT_FRAME_STYLE, name="run a sample")
+        #frame.CreateStatusBar()
+
+        frame.Show(True)
+        frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
+
+        win = MyCanvas(frame)
+
+        # set the frame to a good size
+        frame.SetSize((600,600))
+        win.SetFocus()
+        self.window = win
+        frect = frame.GetRect()
+
+        self.SetTopWindow(frame)
+        self.frame = frame
+
+        return True
+
+    def OnExitApp(self, evt):
+        self.frame.Close(True)
+
+    def OnCloseFrame(self, evt):
+        print('All done!')
+        exit(0)
+        evt.Skip()
+
+runWxThread()
