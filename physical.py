@@ -10,7 +10,7 @@ from wx import glcanvas
 import OpenGL.GL as gl
 import OpenGL.GLUT as glut
 
-class wxThread(threading.Thread):
+class _wxThread(threading.Thread):
     """Run the MainLoop as a thread. Access the frame with self.frame."""
     def __init__(self, autoStart=True):
         threading.Thread.__init__(self)
@@ -21,32 +21,39 @@ class wxThread(threading.Thread):
         if autoStart:
             self.start() #automatically start thread on init
     def run(self):
-        # app = wx.PySimpleApp()
-        app = RunDemoApp()
+        app = _PhysicalApp()
 
         app.MainLoop()
 
     def start_local(self):
         self.start_orig()
 
-def runWxThread():
+# the following global variable tells the main thread whether the
+# window was intentionally closed by the user.
+_window_closed = False
+
+def _runWxThread():
     """MainLoop run as a thread. SetData function is returned."""
 
-    vt = wxThread() #run wx MainLoop as thread
+    vt = _wxThread() #run wx MainLoop as thread
 
     # The following enables the window to stay open after the user's
     # program has completed.
     def sleep_forever():
-        print('program complete, but still running visualization...')
-        while True:
-            time.sleep(60)
+        if not _window_closed:
+            print('program complete, but still running visualization...')
+            while True:
+                time.sleep(60)
     atexit.register(sleep_forever)
 
-class MyCanvas(glcanvas.GLCanvas):
+class _PhysicalCanvas(glcanvas.GLCanvas):
     def __init__(self, parent):
         glcanvas.GLCanvas.__init__(self, parent, -1)
         self.init = False
         self.context = glcanvas.GLContext(self)
+        self.timer = wx.Timer(self)
+        self.timer.Start(100)
+        self.Bind(wx.EVT_TIMER, self.OnTimer) # just repaint ever so often
 
         # initial mouse position
         self.lastx = self.x = 30
@@ -72,12 +79,18 @@ class MyCanvas(glcanvas.GLCanvas):
         gl.glViewport(0, 0, size.width, size.height)
 
     def OnPaint(self, event):
+        print 'OnPaint'
         dc = wx.PaintDC(self)
         self.SetCurrent(self.context)
         if not self.init:
             self.InitGL()
             self.init = True
         self.OnDraw()
+        print 'OnPaint done'
+
+    def OnTimer(self, event):
+        print('timer hit')
+        self.Refresh()
 
     def OnMouseDown(self, evt):
         self.CaptureMouse()
@@ -121,6 +134,13 @@ class MyCanvas(glcanvas.GLCanvas):
     def OnDraw(self):
         # clear color and depth buffers
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+        for s in _spheres:
+            # use a fresh transformation matrix
+            gl.glPushMatrix()
+            # position object
+            gl.glTranslate(s.x, s.y, s.z)
+            glut.glutSolidSphere(s.radius, 60, 60)
+            gl.glPopMatrix()
         # use a fresh transformation matrix
         gl.glPushMatrix()
         # position object
@@ -137,30 +157,20 @@ class MyCanvas(glcanvas.GLCanvas):
         # push into visible buffer
         self.SwapBuffers()
 
-def myFrame():
-    frame = wx.Frame(None, -1, "Physical Python", pos=(0,0),
-                     style=wx.DEFAULT_FRAME_STYLE, name="run simulation")
-    #frame.CreateStatusBar()
-
-    frame.Show(True)
-
-    win = MyCanvas(frame)
-    return frame
-
 #----------------------------------------------------------------------
-class RunDemoApp(wx.App):
+class _PhysicalApp(wx.App):
     def __init__(self):
         wx.App.__init__(self, redirect=False)
 
     def OnInit(self):
-        frame = wx.Frame(None, -1, "RunDemo: ", pos=(0,0),
-                        style=wx.DEFAULT_FRAME_STYLE, name="run a sample")
+        frame = wx.Frame(None, -1, "Physical Python", pos=(0,0),
+                        style=wx.DEFAULT_FRAME_STYLE, name="run simulation")
         #frame.CreateStatusBar()
 
         frame.Show(True)
         frame.Bind(wx.EVT_CLOSE, self.OnCloseFrame)
 
-        win = MyCanvas(frame)
+        win = _PhysicalCanvas(frame)
 
         # set the frame to a good size
         frame.SetSize((600,600))
@@ -178,7 +188,24 @@ class RunDemoApp(wx.App):
 
     def OnCloseFrame(self, evt):
         print('All done!')
+        global _window_closed
+        _window_closed = True
         exit(0)
         evt.Skip()
 
-runWxThread()
+class Sphere(object):
+    def __init__(self):
+        self.x = 0
+        self.y = 0
+        self.z = 0
+        self.radius = 1
+
+
+_spheres = []
+
+def sphere():
+    s = Sphere()
+    _spheres.append(s)
+    return s
+
+_runWxThread()
