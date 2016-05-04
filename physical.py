@@ -82,9 +82,6 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
         print 'OnPaint'
         dc = wx.PaintDC(self)
         self.SetCurrent(self.context)
-        if not self.init:
-            self.InitGL()
-            self.init = True
         self.OnDraw()
         print 'OnPaint done'
 
@@ -113,7 +110,7 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
         gl.glMaterial(gl.GL_FRONT, gl.GL_DIFFUSE, [0.8, 0.8, 0.8, 1.0])
         gl.glMaterial(gl.GL_FRONT, gl.GL_SPECULAR, [1.0, 0.0, 1.0, 1.0])
         gl.glMaterial(gl.GL_FRONT, gl.GL_SHININESS, 50.0)
-        gl.glLight(gl.GL_LIGHT0, gl.GL_AMBIENT, [0.0, 1.0, 0.0, 1.0])
+        gl.glLight(gl.GL_LIGHT0, gl.GL_AMBIENT, [1.0, 1.0, 1.0, 1.0])
         gl.glLight(gl.GL_LIGHT0, gl.GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
         gl.glLight(gl.GL_LIGHT0, gl.GL_SPECULAR, [1.0, 1.0, 1.0, 1.0])
         gl.glLight(gl.GL_LIGHT0, gl.GL_POSITION, [1.0, 1.0, 1.0, 0.0])
@@ -121,19 +118,40 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
         gl.glEnable(gl.GL_LIGHTING)
         gl.glEnable(gl.GL_LIGHT0)
         gl.glDepthFunc(gl.GL_LESS)
+
+        gl.glClearDepth(1.0) # enables clearing of the depth buffer?
+        gl.glShadeModel(gl.GL_SMOOTH)
+
         gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
         # position viewer
         gl.glMatrixMode(gl.GL_MODELVIEW)
         # position viewer
-        gl.glTranslatef(0.0, 0.0, -2.0);
+        gl.glTranslate(0.0, 0.0, -2.0);
         #
         glut.glutInit(sys.argv)
 
 
     def OnDraw(self):
+        if not self.init:
+            self.InitGL()
+            self.init = True
+        #self.InitGL()
         # clear color and depth buffers
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
+
+                # use a fresh transformation matrix
+        gl.glPushMatrix()
+        # # position object
+        # #gl.glTranslate(0.0, 0.0, -2.0)
+        # gl.glRotate(30.0, 1.0, 0.0, 0.0)
+        # gl.glRotate(30.0, 0.0, 1.0, 0.0)
+
+        # gl.glTranslate(0, -1, 0)
+        # gl.glRotate(250, 1, 0, 0)
+        glut.glutSolidCone(0.5, 1, 30, 5)
+        gl.glPopMatrix()
+
         for s in _spheres:
             # use a fresh transformation matrix
             gl.glPushMatrix()
@@ -141,19 +159,10 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
             gl.glTranslate(s.x, s.y, s.z)
             glut.glutSolidSphere(s.radius, 60, 60)
             gl.glPopMatrix()
-        # use a fresh transformation matrix
-        gl.glPushMatrix()
-        # position object
-        #gl.glTranslate(0.0, 0.0, -2.0)
-        gl.glRotate(30.0, 1.0, 0.0, 0.0)
-        gl.glRotate(30.0, 0.0, 1.0, 0.0)
 
-        gl.glTranslate(0, -1, 0)
-        gl.glRotate(250, 1, 0, 0)
-        glut.glutSolidCone(0.5, 1, 30, 5)
-        gl.glPopMatrix()
-        gl.glRotatef((self.y - self.lasty), 0.0, 0.0, 1.0);
-        gl.glRotatef((self.x - self.lastx), 1.0, 0.0, 0.0);
+        # rotate the camera
+        gl.glRotate((self.y - self.lasty), 0.0, 0.0, 1.0);
+        gl.glRotate((self.x - self.lastx), 1.0, 0.0, 0.0);
         # push into visible buffer
         self.SwapBuffers()
 
