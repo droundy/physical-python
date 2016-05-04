@@ -5,6 +5,53 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 import sys, math
 
+class vector(object):
+    def __init__(self,x,y,z):
+        self.x = x
+        self.y = y
+        self.z = z
+    def cross(self,b):
+        return vector(self.y*b.z - self.z*b.y,
+                      self.z*b.x - self.x*b.z,
+                      self.x*b.y - self.y*b.x)
+    def dot(self,b):
+        return self.x*b.x + self.y*b.y + self.z*b.z
+    def abs(self):
+        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
+    def normalized(self):
+        return self / self.abs()
+    def __add__(self, b):
+        return vector(self.x+b.x, self.y + b.y, self.z + b.z)
+    def __sub__(self, b):
+        return vector(self.x-b.x, self.y - b.y, self.z - b.z)
+    def __mul__(self, s):
+        s = float(s)
+        return vector(self.x*s, self.y*s, self.z*s)
+    def __rmul__(self, s):
+        s = float(s)
+        return vector(self.x*s, self.y*s, self.z*s)
+    def __truediv__(self, s):
+        s = float(s)
+        return vector(self.x/s, self.y/s, self.z/s)
+
+print(vector(1,2,3)/10)
+
+class _quaternion(object):
+    def __init__(self,w,v):
+        norm = math.sqrt(w**2 + v.dot(v))
+        self.w = w/norm
+        self.v = v/norm # v is a vector
+    def rotate(self,v):
+        u = self.v.normalized()
+        vpar = v.dot(u)*u
+        vperp = v - vpar
+        cosalpha = self.w
+        sinalpha = self.v.abs()
+        return vperp*cosalpha + u.cross(v)*sinalpha + vpar
+    def __div__(self, s):
+        s = float(s)
+        return _quaternion(self.w/s, self.v/s)
+
 class __display(object):
     '''
     The private class __display exists to conveniently hide our
@@ -14,9 +61,9 @@ class __display(object):
     '''
     def __display(self):
         glPushMatrix()
-        gluLookAt(self.__camera[0], self.__camera[1], self.__camera[2],
-                  self.__center[0], self.__center[1], self.__center[2],
-                  0, 0, 1)
+        gluLookAt(self.__camera.x, self.__camera.y, self.__camera.z,
+                  self.__center.x, self.__center.y, self.__center.z,
+                  self.__up.x, self.__up.y, self.__up.z)
 
         lightZeroPosition = [10.,4.,10.,1.]
         lightZeroColor = [0.8,1.0,0.8,1.0] #green tinged
@@ -43,8 +90,9 @@ class __display(object):
         self.__am_rotating = False
         self.__x_origin = 0
         self.__y_origin = 0
-        self.__center = [0,0,0]
-        self.__camera = [0,10,0]
+        self.__center = vector(0,0,0)
+        self.__camera = vector(0,10,0)
+        self.__up = vector(0,0,1)
 
     def __onMouse(self, btn, state, x, y):
         print(btn, state, x, y)
@@ -59,24 +107,18 @@ class __display(object):
         if self.__am_rotating:
             dx = x - self.__x_origin
             dy = y - self.__y_origin
-            sinphi = dx/self.__windowsize[0]
-            if abs(sinphi) > 1:
-                sinphi = sinphi/abs(sinphi)
-            cosphi = math.sqrt(1 - sinphi**2)
-            cx = self.__camera[0]*cosphi + self.__camera[1]*sinphi
-            cy = -self.__camera[0]*sinphi + self.__camera[1]*cosphi
-            r = math.sqrt(cx**2 + cy**2)
-            sintheta = dx/self.__windowsize[1]
-            if abs(sintheta) > 1:
-                sintheta = sintheta/abs(sintheta)
-            costheta = math.sqrt(1 - sintheta**2)
-            cz = self.__camera[2]*costheta - r*sintheta
-            cr = r*costheta + self.__camera[2]*sintheta
-            cx = cx*cr/r
-            cy = cy*cr/r
-            self.__camera[0] = cx
-            self.__camera[1] = cy
-            self.__camera[2] = cz
+            if dx == 0 and dy == 0:
+                return
+            yhat = self.__up.normalized()
+            xhat = self.__up.cross((self.__center - self.__camera).normalized())
+            direction = (dy*xhat - dx*yhat).normalized()
+            rotation = math.sqrt((dx**2 + dy**2)
+                                 /
+                                 (self.__windowsize[0]**2 + self.__windowsize[1]**2))
+            print('rotation', rotation)
+            q = _quaternion(1-rotation, direction*rotation)
+            self.__camera = q.rotate(self.__camera)
+            self.__up = q.rotate(self.__up)
             self.__x_origin = x
             self.__y_origin = y
             glutPostRedisplay()
