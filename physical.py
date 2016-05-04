@@ -107,7 +107,7 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
     def InitGL( self ):
         gl.glMatrixMode(gl.GL_PROJECTION)
         # camera frustrum setup
-        gl.glFrustum(-0.25, 0.25, -0.25, 0.25, 0.1, 10.0)
+        gl.glFrustum(-0.5, 0.5, -0.5, 0.5, 1, 10.0)
         gl.glMaterial(gl.GL_FRONT, gl.GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])
         gl.glMaterial(gl.GL_FRONT, gl.GL_DIFFUSE, [0.8, 0.8, 0.8, 1.0])
         gl.glMaterial(gl.GL_FRONT, gl.GL_SPECULAR, [1.0, 0.0, 1.0, 1.0])

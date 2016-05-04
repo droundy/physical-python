@@ -11,10 +11,10 @@ s.x = 1.1
 
 s2.x = -1.1
 
-# t = 0
-# dt = 0.001
-# while True:
-#     s.x = 2*numpy.sin(t)
-#     s2.z = 3*numpy.cos(t)
-#     time.sleep(dt)
-#     t += dt
+t = 0
+dt = 0.001
+while True:
+    s.x = 2*numpy.sin(t)
+    s2.z = 2*numpy.cos(t)
+    time.sleep(dt)
+    t += dt
