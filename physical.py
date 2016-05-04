@@ -48,7 +48,12 @@ def _runWxThread():
 
 class _PhysicalCanvas(glcanvas.GLCanvas):
     def __init__(self, parent):
-        glcanvas.GLCanvas.__init__(self, parent, -1)
+        # the attribList is hardly documented, but the following seems
+        # to work.
+        attribList=(glcanvas.WX_GL_RGBA,
+                    glcanvas.WX_GL_DOUBLEBUFFER,
+                    glcanvas.WX_GL_DEPTH_SIZE, 24)
+        glcanvas.GLCanvas.__init__(self, parent, -1, attribList=attribList)
         self.init = False
         self.context = glcanvas.GLContext(self)
         self.timer = wx.Timer(self)
@@ -79,14 +84,11 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
         gl.glViewport(0, 0, size.width, size.height)
 
     def OnPaint(self, event):
-        print 'OnPaint'
         dc = wx.PaintDC(self)
         self.SetCurrent(self.context)
         self.OnDraw()
-        print 'OnPaint done'
 
     def OnTimer(self, event):
-        print('timer hit')
         self.Refresh()
 
     def OnMouseDown(self, evt):
@@ -105,7 +107,7 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
     def InitGL( self ):
         gl.glMatrixMode(gl.GL_PROJECTION)
         # camera frustrum setup
-        gl.glFrustum(-0.5, 0.5, -0.5, 0.5, 1.0, 3.0)
+        gl.glFrustum(-0.25, 0.25, -0.25, 0.25, 0.1, 10.0)
         gl.glMaterial(gl.GL_FRONT, gl.GL_AMBIENT, [0.2, 0.2, 0.2, 1.0])
         gl.glMaterial(gl.GL_FRONT, gl.GL_DIFFUSE, [0.8, 0.8, 0.8, 1.0])
         gl.glMaterial(gl.GL_FRONT, gl.GL_SPECULAR, [1.0, 0.0, 1.0, 1.0])
@@ -127,7 +129,7 @@ class _PhysicalCanvas(glcanvas.GLCanvas):
         # position viewer
         gl.glMatrixMode(gl.GL_MODELVIEW)
         # position viewer
-        gl.glTranslate(0.0, 0.0, -2.0);
+        gl.glTranslate(0.0, 0.0, -3.0);
         #
         glut.glutInit(sys.argv)
 
