@@ -4,17 +4,16 @@ import physical, time, numpy
 
 s = physical.sphere()
 s2 = physical.sphere()
-origin = physical.sphere()
-origin.radius = 0.1
+origin = physical.sphere(radius=0.1, color=physical.red)
 
-s.x = 1.1
+s.pos.x = 1.1
 
-s2.x = -1.1
+s2.pos.x = -1.1
 
 t = 0
 dt = 0.001
-while True:
-    s.x = 2*numpy.sin(t)
-    s2.z = 2*numpy.cos(t)
-    time.sleep(dt)
+while t < 10:
+    s.pos.x = 2*numpy.sin(2*numpy.pi*t)
+    s2.pos.z = 2*numpy.cos(numpy.pi*t)
+    physical.timestep(dt)
     t += dt
