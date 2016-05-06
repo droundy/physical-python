@@ -4,7 +4,7 @@ import physical, time, numpy
 
 s = physical.sphere()
 s2 = physical.sphere()
-origin = physical.sphere(radius=0.1, color=physical.red)
+origin = physical.sphere(radius=0.1*physical.meter, color=physical.red)
 
 s.pos.x = 1.1
 

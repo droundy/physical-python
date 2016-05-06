@@ -64,6 +64,14 @@ def value(v):
     if hasattr(v, 'v'):
         return v.v
     return v
+def check_units(v, expected, err):
+    # values of zero do not need units
+    if value(v) == 0:
+        return
+    if type(v) == vector and v.x == 0 and v.y == 0 and v.z == 0:
+        return
+    if units(v) != units(expected):
+        raise Exception(err)
 
 class scalar(Units):
     def __init__(self,v, mks=(0,0,0)):
@@ -169,10 +177,9 @@ class _Color(object):
 
 class _Sphere(object):
     def __init__(self, pos, radius, color):
-        # if not has_dimensions(pos, meter):
-        #     raise Exception('position must have dimensions of distance')
         # if not has_dimensions(radius, meter):
         #     raise Exception('radius must have dimensions of distance')
+        check_units(pos, meter, 'position must have dimensions of distance')
         self.pos = pos
         self.radius = radius
         self.color = color
@@ -184,7 +191,8 @@ class _Sphere(object):
         # position object
         glTranslate(self.pos.x, self.pos.y, self.pos.z)
         glMaterialfv(GL_FRONT,GL_DIFFUSE,self.color.asarray())
-        glutSolidSphere(self.radius, 60, 60)
+        check_units(self.radius, meter, 'radius must have dimensions of distance')
+        glutSolidSphere(value(self.radius), 60, 60)
         glPopMatrix()
     def __repr__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
@@ -322,7 +330,9 @@ __x = __display()
 def timestep(dt):
     return __x.timestep(dt)
 
-def sphere(pos = vector(0,0,0), radius=1.0, color=_Color(1,1,1)):
+def sphere(pos = vector(0,0,0), radius=1.0*meter, color=_Color(1,1,1)):
+    check_units(pos, meter, 'position must have dimensions of distance')
+    check_units(radius, meter, 'radius must have dimensions of distance')
     # if not has_dimensions(pos, meter):
     #     print(pos)
     #     raise Exception('position must have dimensions of distance')
