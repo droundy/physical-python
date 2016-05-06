@@ -52,8 +52,8 @@ class Units(object):
             r.append('kg**({})'.format(kg))
         if s == 1:
             r.append('second')
-        elif self.s != 0:
-            r.append('second**({})'.format(self.s))
+        elif s != 0:
+            r.append('second**({})'.format(s))
         return '*'.join(r)
 
 def units(v):
@@ -64,13 +64,15 @@ def value(v):
     if hasattr(v, 'v'):
         return v.v
     return v
-def check_units(v, expected, err):
+def check_units(a, b, err):
     # values of zero do not need units
-    if value(v) == 0:
+    if value(a) == 0 or value(b) == 0:
         return
-    if type(v) == vector and v.x == 0 and v.y == 0 and v.z == 0:
+    if type(a) == vector and a.x == 0 and a.y == 0 and a.z == 0:
         return
-    if units(v) != units(expected):
+    if type(b) == vector and b.x == 0 and b.y == 0 and b.z == 0:
+        return
+    if units(a) != units(b):
         raise Exception(err)
 
 class scalar(Units):
@@ -96,6 +98,8 @@ class scalar(Units):
         return scalar(b*self.v, self.mks)
     def __eq__(self, b):
         return units(b) == self.mks and value(b) == self.v
+    def __repr__(self):
+        return '%s %s' % (self.v, Units._repr(self))
 
 meter = scalar(1, (1, 0, 0))
 kg = scalar(1, (0, 1, 0))
@@ -103,26 +107,39 @@ second = scalar(1, (0, 0, 1))
 
 class vector(Units):
     def __init__(self,x,y,z, mks=(0,0,0)):
-        self.mks = mks
-        self.x = x
-        self.y = y
-        self.z = z
-    # def __init__(self,x,y,z):
-    #     object.__setattr__(self, '_vector__v', numpy.array([x,y,z]))
-    # def __getattr__(self, name):
-    #     if name == 'x':
-    #         return self.__v[0]
-    #     if name == 'y':
-    #         return self.__v[1]
-    #     if name == 'z':
-    #         return self.__v[2]
-    # def __setattr__(self, name, value):
-    #     if name == 'x':
-    #         self.__v[0] = value
-    #     if name == 'y':
-    #         self.__v[1] = value
-    #     if name == 'z':
-    #         self.__v[2] = value
+        if units(x) != mks:
+            check_units(x,y,'x and y components must have same dimensions')
+            check_units(x,z,'x and y components must have same dimensions')
+            self.mks = mks
+        else:
+            self.mks = mks
+        self._x = value(x)
+        self._y = value(y)
+        self._z = value(z)
+    @property
+    def x(self):
+        return scalar(self._x, self.mks)
+    @x.setter
+    def x(self,v):
+        print('setting x', v, self)
+        check_units(v, self, 'x component must have dimensions of vector')
+        self._x = v
+
+    @property
+    def y(self):
+        return scalar(self._y, self.mks)
+    @y.setter
+    def y(self,v):
+        check_units(v, self, 'y component must have dimensions of vector')
+        self._y = v
+
+    @property
+    def z(self):
+        return scalar(self._z, self.mks)
+    @z.setter
+    def z(self,v):
+        check_units(v, self, 'z component must have dimensions of vector')
+        self._z = v
     def cross(self,b):
         return vector(self.y*b.z - self.z*b.y,
                       self.z*b.x - self.x*b.z,
@@ -134,25 +151,28 @@ class vector(Units):
     def normalized(self):
         return self / self.abs()
     def __add__(self, b):
-        return vector(self.x+b.x, self.y + b.y, self.z + b.z)
+        check_units(b, self, 'can only add vectors with same dimensions')
+        return vector(self._x+b._x, self._y + b._y, self._z + b._z, self.mks)
     def __sub__(self, b):
         return vector(self.x-b.x, self.y - b.y, self.z - b.z)
     def __mul__(self, s):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
-        if type(s) == Units:
-            return units(self*s.value, s.m, s.kg, s.s)
-        return vector(self.x*s, self.y*s, self.z*s)
+        mks = Units._mul(self, s)
+        return vector(self.x*value(s), self.y*value(s), self.z*value(s), mks)
     def __rmul__(self, s):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
-        return vector(self.x*s, self.y*s, self.z*s)
+        mks = Units._mul(self, s)
+        return vector(self.x*value(s), self.y*value(s), self.z*value(s), mks)
     def __truediv__(self, s):
         if not is_scalar(s):
             raise Exception('can only divide vectors by scalars')
         return vector(self.x/s, self.y/s, self.z/s)
+    def __eq__(self,b):
+        return type(b) == vector and self.mks == b.mks and self._x == b._x and self._y == b._y and self._z == b._z
     def __repr__(self):
-        return '<%g,%g,%g>' % (self.x, self.y, self.z)
+        return '<%s,%s,%s>' % (self.x, self.y, self.z)
     def copy(self):
         return vector(self.x, self.y, self.z)
 
@@ -189,7 +209,7 @@ class _Sphere(object):
         # use a fresh transformation matrix
         glPushMatrix()
         # position object
-        glTranslate(self.pos.x, self.pos.y, self.pos.z)
+        glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         glMaterialfv(GL_FRONT,GL_DIFFUSE,self.color.asarray())
         check_units(self.radius, meter, 'radius must have dimensions of distance')
         glutSolidSphere(value(self.radius), 60, 60)
@@ -206,9 +226,9 @@ class __display(object):
     '''
     def __display(self):
         glPushMatrix()
-        gluLookAt(self.__camera.x, self.__camera.y, self.__camera.z,
-                  self.__center.x, self.__center.y, self.__center.z,
-                  self.__up.x, self.__up.y, self.__up.z)
+        gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
+                  value(self.__center.x), value(self.__center.y), value(self.__center.z),
+                  value(self.__up.x), value(self.__up.y), value(self.__up.z))
 
         lightZeroPosition = [10.,4.,10.,1.]
         lightZeroColor = [0.8,1.0,0.8,1.0] #green tinged
@@ -330,7 +350,7 @@ __x = __display()
 def timestep(dt):
     return __x.timestep(dt)
 
-def sphere(pos = vector(0,0,0), radius=1.0*meter, color=_Color(1,1,1)):
+def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_Color(1,1,1)):
     check_units(pos, meter, 'position must have dimensions of distance')
     check_units(radius, meter, 'radius must have dimensions of distance')
     # if not has_dimensions(pos, meter):

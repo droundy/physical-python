@@ -10,6 +10,7 @@ s.pos.x = 1.1
 
 s2.pos.x = -1.1
 
+exit(1)
 t = 0
 dt = 0.001
 while t < 10:
