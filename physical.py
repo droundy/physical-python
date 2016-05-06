@@ -3,7 +3,8 @@ from __future__ import division, print_function
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 from OpenGL.GL import *
-import sys, math, atexit, time, numpy
+import sys, math, atexit, time, numpy, traceback
+import functools
 
 def has_dimensions(a,b):
     if type(a) != Units and type(b) != Units:
@@ -32,6 +33,10 @@ class Units(object):
         a = self.mks
         b = units(b)
         return (a[0]+b[0], a[1]+b[1], a[2]+b[2])
+    def _div(self, b):
+        a = self.mks
+        b = units(b)
+        return (a[0]-b[0], a[1]-b[1], a[2]-b[2])
     def _pow(self, b):
         if units(b) != (0,0,0):
             raise Exception('you cannot take quantity to a power with dimensions %s' % Units.__repr__(b))
@@ -55,6 +60,8 @@ class Units(object):
         elif s != 0:
             r.append('second**({})'.format(s))
         return '*'.join(r)
+def sqrt(v):
+    return v**0.5
 
 def units(v):
     if hasattr(v, 'mks'):
@@ -64,27 +71,41 @@ def value(v):
     if hasattr(v, 'v'):
         return v.v
     return v
-def check_units(a, b, err):
+def check_units(err, *vals):
     # values of zero do not need units
-    if value(a) == 0 or value(b) == 0:
-        return
-    if type(a) == vector and a.x == 0 and a.y == 0 and a.z == 0:
-        return
-    if type(b) == vector and b.x == 0 and b.y == 0 and b.z == 0:
-        return
-    if units(a) != units(b):
-        raise Exception(err)
+    def is_not_boring(v):
+        return not ((not hasattr(v, 'mks') and v == 0)
+                    or (type(v) == vector and v.mks == (0,0,0) and
+                        v.x == 0 and v.y == 0 and v.z == 0))
+    vals = list(filter(is_not_boring, vals))
+    if len(vals) >= 2:
+        mks = units(vals[0])
+        for v in vals[1:]:
+            if units(v) != mks:
+                raise Exception(err + ': %s vs %s' % (v, vals[0]))
+
+def __is_not_boring(v):
+    return not ((not hasattr(v, 'mks') and v == 0)
+                or (type(v) == vector and v.mks == (0,0,0) and
+                    v.x == 0 and v.y == 0 and v.z == 0))
+def units_match(err):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            vals = list(filter(__is_not_boring, list(args) + list(kwargs.values())))
+            if len(vals) >= 2:
+                mks = units(vals[0])
+                for v in vals[1:]:
+                    if units(v) != mks:
+                        raise Exception(err + ': %s vs %s' % (v, vals[0]))
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 class scalar(Units):
     def __init__(self,v, mks=(0,0,0)):
         self.mks = mks
         self.v = v
-    def __mul__(self, b):
-        mks = Units._mul(self, b)
-        if type(b) == vector:
-            return vector(b.x*self.v, b.y*self.v, b.z*self.v, mks)
-        else:
-            return scalar(self.v*value(b), mks)
     def __add__(self, b):
         mks = Units._add(self, b)
         return scalar(self.v + value(b), mks)
@@ -94,8 +115,20 @@ class scalar(Units):
     def __pow__(self, b):
         mks = Units._pow(self, b)
         return scalar(self.v **value(b), mks)
+    def __mul__(self, b):
+        mks = Units._mul(self, b)
+        if type(b) == vector:
+            return vector(b.x*self.v, b.y*self.v, b.z*self.v, mks)
+        else:
+            return scalar(self.v*value(b), mks)
     def __rmul__(self, b):
         return scalar(b*self.v, self.mks)
+    def __truediv__(self, b):
+        mks = Units._div(self, b)
+        if type(b) == vector:
+            raise Exception('cannot divide scalar by vector')
+        else:
+            return scalar(self.v/value(b), mks)
     def __eq__(self, b):
         return units(b) == self.mks and value(b) == self.v
     def __repr__(self):
@@ -107,12 +140,15 @@ second = scalar(1, (0, 0, 1))
 
 class vector(Units):
     def __init__(self,x,y,z, mks=(0,0,0)):
-        if units(x) != mks:
-            check_units(x,y,'x and y components must have same dimensions')
-            check_units(x,z,'x and y components must have same dimensions')
-            self.mks = mks
-        else:
-            self.mks = mks
+        check_units('vector components must have same dimensions', x,y,z)
+        self.mks = mks
+        if mks == (0,0,0):
+            if units(x) != mks:
+                self.mks = units(x)
+            elif units(y) != mks:
+                self.mks = units(y)
+            elif units(z) != mks:
+                self.mks = units(z)
         self._x = value(x)
         self._y = value(y)
         self._z = value(z)
@@ -120,38 +156,37 @@ class vector(Units):
     def x(self):
         return scalar(self._x, self.mks)
     @x.setter
+    @units_match('x component must have dimensions of vector')
     def x(self,v):
-        print('setting x', v, self)
-        check_units(v, self, 'x component must have dimensions of vector')
-        self._x = v
+        self._x = value(v)
 
     @property
     def y(self):
         return scalar(self._y, self.mks)
     @y.setter
+    @units_match('y component must have dimensions of vector')
     def y(self,v):
-        check_units(v, self, 'y component must have dimensions of vector')
-        self._y = v
+        self._y = value(v)
 
     @property
     def z(self):
         return scalar(self._z, self.mks)
     @z.setter
+    @units_match('z component must have dimensions of vector')
     def z(self,v):
-        check_units(v, self, 'z component must have dimensions of vector')
-        self._z = v
+        self._z = value(v)
     def cross(self,b):
         return vector(self.y*b.z - self.z*b.y,
                       self.z*b.x - self.x*b.z,
-                      self.x*b.y - self.y*b.x, Units.__mul__(self, b))
+                      self.x*b.y - self.y*b.x, Units._mul(self, b))
     def dot(self,b):
         return self.x*b.x + self.y*b.y + self.z*b.z
     def abs(self):
-        return math.sqrt(self.x**2 + self.y**2 + self.z**2)
+        return scalar(math.sqrt(self.x.v**2 + self.y.v**2 + self.z.v**2), self.mks)
     def normalized(self):
         return self / self.abs()
     def __add__(self, b):
-        check_units(b, self, 'can only add vectors with same dimensions')
+        check_units('can only add vectors with same dimensions', b, self)
         return vector(self._x+b._x, self._y + b._y, self._z + b._z, self.mks)
     def __sub__(self, b):
         return vector(self.x-b.x, self.y - b.y, self.z - b.z)
@@ -159,7 +194,7 @@ class vector(Units):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
         mks = Units._mul(self, s)
-        return vector(self.x*value(s), self.y*value(s), self.z*value(s), mks)
+        return vector(self.x.v*value(s), self.y.v*value(s), self.z.v*value(s), mks)
     def __rmul__(self, s):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
@@ -199,7 +234,7 @@ class _Sphere(object):
     def __init__(self, pos, radius, color):
         # if not has_dimensions(radius, meter):
         #     raise Exception('radius must have dimensions of distance')
-        check_units(pos, meter, 'position must have dimensions of distance')
+        check_units('position must have dimensions of distance', pos, meter)
         self.pos = pos
         self.radius = radius
         self.color = color
@@ -211,7 +246,7 @@ class _Sphere(object):
         # position object
         glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         glMaterialfv(GL_FRONT,GL_DIFFUSE,self.color.asarray())
-        check_units(self.radius, meter, 'radius must have dimensions of distance')
+        check_units('radius must have dimensions of distance', self.radius, meter)
         glutSolidSphere(value(self.radius), 60, 60)
         glPopMatrix()
     def __repr__(self):
@@ -351,16 +386,8 @@ def timestep(dt):
     return __x.timestep(dt)
 
 def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_Color(1,1,1)):
-    check_units(pos, meter, 'position must have dimensions of distance')
-    check_units(radius, meter, 'radius must have dimensions of distance')
-    # if not has_dimensions(pos, meter):
-    #     print(pos)
-    #     raise Exception('position must have dimensions of distance')
-    # if not has_dimensions(radius, meter):
-    #     raise Exception('radius must have dimensions of distance')
-
-    # the "copy" bit below is needed to ensure that each sphere has
-    # its own position.
+    check_units('position must have dimensions of distance', pos, meter)
+    check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_sphere(pos.copy(), radius, color.copy())
 
 red = _Color(1,0,0)
