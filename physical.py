@@ -5,10 +5,6 @@ from OpenGL.GLU import *
 from OpenGL.GL import *
 import sys, math, atexit, time, numpy
 
-def units(value, m, kg, s):
-    if m == 0 and kg == 0 and s == 0:
-        return value
-    return Units(value, m, kg, s)
 def has_dimensions(a,b):
     if type(a) != Units and type(b) != Units:
         return True
@@ -22,60 +18,84 @@ def is_vector(v):
 def is_scalar(s):
     return not is_vector(s)
 class Units(object):
-    def __init__(self, value, m, kg, s):
-        self.value = value
-        self.m = m
-        self.kg = kg
-        self.s = s
-    def __add__(self, b):
-        if type(b) != Units or self.m != b.m or self.kg != b.kg or self.s != b.s:
+    def __init__(self, m, kg, s):
+        self.mks = (m,kg,s)
+    def _add(self, b):
+        if self.mks != units(b):
             raise Exception('you cannot add quantities with differing units: {} + {}'.format(self,b))
-        return units(self.value + b.value, self.m, self.kg, self.s)
-    def __sub__(self, b):
-        if self.m != b.m or self.kg != b.kg or self.s != b.s:
-            raise Exception('you cannot subtract quantities with differing units:')
-        return units(self.value - b.value, self.m, self.kg, self.s)
-    def __mul__(self, b):
-        if type(b) == Units:
-            return units(self.value*b.value, self.m+b.m, self.kg+b.kg, self.s+b.s)
-        return units(self.value*b, self.m, self.kg, self.s)
-    def __rmul__(self, b):
-        if type(b) == Units:
-            return units(b.value*self.value, self.m+b.m, self.kg+b.kg, self.s+b.s)
-        return units(b*self.value, self.m, self.kg, self.s)
-    def __pow__(self, b):
-        if type(b) == Units:
-            raise Exception('you can only raise a quantity to a dimensionless power')
-        return units(self.value**b, self.m*b, self.kg*b, self.s*b)
-    def __eq__(self, b):
-        return self.value == b.value and self.m == b.m and self.kg == b.kg and self.s == b.s
-    def __repr__(self):
-        s = repr(self.value)
-        if self.m == 1:
-            s += '*meter'
-        elif self.m != 0:
-            s += '*meter**({})'.format(self.m)
-        if self.kg == 1:
-            s += '*kg'
-        elif self.kg != 0:
-            s += '*kg**({})'.format(self.kg)
-        if self.s == 1:
-            s += '*second'
+        return self.mks
+    def _sub(self, b):
+        if self.mks != units(b):
+            raise Exception('you cannot subtract quantities with differing units: {} + {}'.format(self,b))
+        return self.mks
+    def _mul(self, b):
+        a = self.mks
+        b = units(b)
+        return (a[0]+b[0], a[1]+b[1], a[2]+b[2])
+    def _pow(self, b):
+        if units(b) != (0,0,0):
+            raise Exception('you cannot take quantity to a power with dimensions %s' % Units.__repr__(b))
+        a = self.mks
+        return (a[0]*b, a[1]*b, a[2]*b)
+    def _eq(self, b):
+        return self.mks == b.mks
+    def _repr(self):
+        (m,kg,s) =self.mks
+        r = []
+        if m == 1:
+            r.append('meter')
+        elif m != 0:
+            r.append('meter**({})'.format(m))
+        if kg == 1:
+            r.append('kg')
+        elif kg != 0:
+            r.append('kg**({})'.format(kg))
+        if s == 1:
+            r.append('second')
         elif self.s != 0:
-            s += '*second**({})'.format(self.s)
-        return s
-    def copy(self):
-        return units(self.value.copy(), self.m, self.kg, self.s)
-    def __getattr__(self, name):
-        if name == 'x':
-            return self.value.x
+            r.append('second**({})'.format(self.s))
+        return '*'.join(r)
 
-meter = units(1, 1, 0, 0)
-kg = units(1, 0, 1, 0)
-second = units(1, 0, 0, 1)
+def units(v):
+    if hasattr(v, 'mks'):
+        return v.mks
+    return (0,0,0)
+def value(v):
+    if hasattr(v, 'v'):
+        return v.v
+    return v
 
-class vector(object):
-    def __init__(self,x,y,z):
+class scalar(Units):
+    def __init__(self,v, mks=(0,0,0)):
+        self.mks = mks
+        self.v = v
+    def __mul__(self, b):
+        mks = Units._mul(self, b)
+        if type(b) == vector:
+            return vector(b.x*self.v, b.y*self.v, b.z*self.v, mks)
+        else:
+            return scalar(self.v*value(b), mks)
+    def __add__(self, b):
+        mks = Units._add(self, b)
+        return scalar(self.v + value(b), mks)
+    def __sub__(self, b):
+        mks = Units._sub(self, b)
+        return scalar(self.v - value(b), mks)
+    def __pow__(self, b):
+        mks = Units._pow(self, b)
+        return scalar(self.v **value(b), mks)
+    def __rmul__(self, b):
+        return scalar(b*self.v, self.mks)
+    def __eq__(self, b):
+        return units(b) == self.mks and value(b) == self.v
+
+meter = scalar(1, (1, 0, 0))
+kg = scalar(1, (0, 1, 0))
+second = scalar(1, (0, 0, 1))
+
+class vector(Units):
+    def __init__(self,x,y,z, mks=(0,0,0)):
+        self.mks = mks
         self.x = x
         self.y = y
         self.z = z
@@ -98,7 +118,7 @@ class vector(object):
     def cross(self,b):
         return vector(self.y*b.z - self.z*b.y,
                       self.z*b.x - self.x*b.z,
-                      self.x*b.y - self.y*b.x)
+                      self.x*b.y - self.y*b.x, Units.__mul__(self, b))
     def dot(self,b):
         return self.x*b.x + self.y*b.y + self.z*b.z
     def abs(self):
