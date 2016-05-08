@@ -1,2 +1,7 @@
 | pydoc3 -w physical
 c .pyc
+c ~
+
+| pydoc3 -w physical.color
+c .pyc
+c ~

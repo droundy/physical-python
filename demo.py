@@ -5,7 +5,8 @@ from physical import *
 
 s = sphere()
 s2 = sphere()
-origin = sphere(radius=0.1*meter, color=red)
+s.color = color.blue
+origin = sphere(radius=0.1*meter, color=color.red)
 
 print(s.pos)
 s.pos.x = 1.1*meter

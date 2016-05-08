@@ -1,11 +1,11 @@
 from __future__ import division, print_function
 
 __all__ = ('scalar', 'vector',
+           'color',
            'check_units', 'dimensionless',
            'sqrt', 'sin', 'cos', 'tan', 'atan2',
            'sphere',
            'timestep',
-           'red',
            'meter', 'second', 'kg')
 
 import OpenGL.GLUT as glut
@@ -13,6 +13,8 @@ import OpenGL.GLU as glu
 import OpenGL.GL as gl
 import sys, math, atexit, time, numpy, traceback
 import functools
+
+import physical.color
 
 def is_vector(v):
     if type(v) == Units:
@@ -307,14 +309,6 @@ class _rotation(object):
         sinalpha = math.sin(self.angle)
         return vperp*cosalpha + self.axis.cross(v)*sinalpha + vpar
 
-class _RGB(object):
-    def __init__(self, r,g,b):
-        self.r = r; self.g = g; self.b = b
-    def asarray(self):
-        return [self.r, self.g, self.b]
-    def copy(self):
-        return _RGB(self.r, self.g, self.b)
-
 class _Sphere(object):
     def __init__(self, pos, radius, color):
         check_units('position must have dimensions of distance', pos, meter)
@@ -328,7 +322,7 @@ class _Sphere(object):
         gl.glPushMatrix()
         # position object
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
-        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.asarray())
+        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
         check_units('radius must have dimensions of distance', self.radius, meter)
         glut.glutSolidSphere(value(self.radius), 60, 60)
         gl.glPopMatrix()
@@ -479,7 +473,7 @@ def timestep(dt):
     check_units('time step dt must be a time', dt, second)
     return __x.timestep(dt)
 
-def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_RGB(1,1,1)):
+def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
     """Create a sphere object.
 
     Args:
@@ -491,5 +485,3 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_RGB(1,1,1)):
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_sphere(pos.copy(), radius, color.copy())
-
-red = _RGB(1,0,0)
