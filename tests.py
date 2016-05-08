@@ -18,6 +18,8 @@ class TestUnits(unittest.TestCase):
         b = vector(2,1,0)*meter
         c = vector(2,2,2)*meter
         self.assertEqual(a+b,c)
+        with self.assertRaises(Exception):
+            a + 3*meter
     def test_sub(self):
         a = 3*meter
         b = 2*meter
@@ -30,6 +32,18 @@ class TestUnits(unittest.TestCase):
             a - a**2
         with self.assertRaises(Exception):
             1 - a
+        with self.assertRaises(Exception):
+            vector(2,2,2)*meter - 3*meter
+        with self.assertRaises(Exception):
+            vector(2,2,2) - 3
+        with self.assertRaises(Exception):
+            3*meter - vector(2,2,2)*meter
+        with self.assertRaises(Exception):
+            3 - vector(2,2,2)
+        a = vector(0,1,2)*meter
+        b = vector(2,1,0)*meter
+        c = vector(2,2,2)*meter
+        self.assertEqual(a,c-b)
     def test_pow(self):
         a = 3*meter
         b = 2*meter
@@ -41,9 +55,13 @@ class TestUnits(unittest.TestCase):
             a**b
         with self.assertRaises(Exception):
             1**a
+        with self.assertRaises(Exception):
+            vector(1,2,3)**2
     def test_sqrt(self):
         b = 4*meter
         self.assertEqual(sqrt(b)**2, b)
+        with self.assertRaises(Exception):
+            sqrt(vector(1,2,3))
     def test_division(self):
         a = 2*meter
         b = 4*meter
@@ -55,6 +73,12 @@ class TestUnits(unittest.TestCase):
             a/v
         with self.assertRaises(Exception):
             v/v
+        self.assertEqual(vector(1,2,4)/2, vector(0.5,1,2))
+        self.assertEqual((vector(1,2,4)*meter)/(2*meter), vector(0.5,1,2))
+        self.assertEqual(vector(1,2,4)*meter/(2*second),
+                         vector(0.5,1,2)*meter/second)
+        with self.assertRaises(Exception):
+            5/vector(2,2,2)
     def test_mul(self):
         a = 2*meter
         b = 4*meter
