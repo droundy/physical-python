@@ -91,7 +91,7 @@ def __is_not_boring(v):
 def units_match(err):
     def decorator(func):
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def unit_checking(*args, **kwargs):
             vals = list(filter(__is_not_boring, list(args) + list(kwargs.values())))
             if len(vals) >= 2:
                 mks = units(vals[0])
@@ -99,7 +99,7 @@ def units_match(err):
                     if units(v) != mks:
                         raise Exception(err + ': %s vs %s' % (v, vals[0]))
             return func(*args, **kwargs)
-        return wrapper
+        return unit_checking
     return decorator
 
 class scalar(Units):
