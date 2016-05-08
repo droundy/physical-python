@@ -1,0 +1,2 @@
+| pydoc3 -w physical
+c .pyc

@@ -1,17 +1,19 @@
 from __future__ import division, print_function
 
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
-from OpenGL.GL import *
+__all__ = ('scalar', 'vector',
+           'check_units', 'dimensionless',
+           'sqrt', 'sin', 'cos', 'tan', 'atan2',
+           'sphere',
+           'timestep',
+           'red',
+           'meter', 'second', 'kg')
+
+import OpenGL.GLUT as glut
+import OpenGL.GLU as glu
+import OpenGL.GL as gl
 import sys, math, atexit, time, numpy, traceback
 import functools
 
-def has_dimensions(a,b):
-    if type(a) != Units and type(b) != Units:
-        return True
-    if type(a) != type(b):
-        return False
-    return a.m == b.m and a.kg == b.kg and a.s == b.s
 def is_vector(v):
     if type(v) == Units:
         v = v.value
@@ -64,8 +66,6 @@ class Units(object):
         elif s != 0:
             r.append('second**({})'.format(s))
         return '*'.join(r)
-def sqrt(v):
-    return v**0.5
 
 def units(v):
     if hasattr(v, 'mks'):
@@ -87,6 +87,7 @@ def check_units(err, *vals):
         for v in vals[1:]:
             if units(v) != mks:
                 raise Exception(err + ': %s vs %s' % (v, vals[0]))
+    return True
 
 def __is_not_boring(v):
     return not ((not hasattr(v, 'mks') and v == 0)
@@ -107,6 +108,12 @@ def units_match(err):
     return decorator
 
 def dimensionless(err):
+    '''
+    A decorator for declaring that a function expects dimensionless
+    input. This is used in functions like 'sin' and 'cos'.  The single
+    argument is the error message to be presented to a user who
+    accidentally provides this function with a value having units.
+    '''
     def decorator(func):
         @functools.wraps(func)
         def is_dimensionless(*args, **kwargs):
@@ -119,7 +126,17 @@ def dimensionless(err):
 
 @functools.total_ordering
 class scalar(Units):
+    '''A scalar value with units attached.
+    '''
     def __init__(self,v, mks=(0,0,0)):
+        """Construct a new 'scalar' object.
+
+        Args:
+           v: The value of the object, usually a float or an int
+           mks: A triple containing the units in terms of meters, kg, and seconds
+        Returns:
+           returns nothing
+        """
         self.mks = mks
         self.v = v
     def __add__(self, b):
@@ -161,6 +178,9 @@ class scalar(Units):
     def __repr__(self):
         return '%s %s' % (self.v, Units._repr(self))
 
+def sqrt(v):
+    return v**0.5
+
 @dimensionless('argument to sin must be dimensionless')
 def sin(x):
     return numpy.sin(value(x))
@@ -168,6 +188,14 @@ def sin(x):
 @dimensionless('argument to cos must be dimensionless')
 def cos(x):
     return numpy.cos(value(x))
+
+@dimensionless('argument to tan must be dimensionless')
+def tan(x):
+    return numpy.cos(value(x))
+
+@units_match('arguments to atan2 must have the same units')
+def atan2(y,x):
+    return numpy.atan2(value(y)/value(x))
 
 meter = scalar(1, (1, 0, 0))
 kg = scalar(1, (0, 1, 0))
@@ -269,8 +297,6 @@ class _Color(object):
 
 class _Sphere(object):
     def __init__(self, pos, radius, color):
-        # if not has_dimensions(radius, meter):
-        #     raise Exception('radius must have dimensions of distance')
         check_units('position must have dimensions of distance', pos, meter)
         self.pos = pos
         self.radius = radius
@@ -279,13 +305,13 @@ class _Sphere(object):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
     def _draw(self):
         # use a fresh transformation matrix
-        glPushMatrix()
+        gl.glPushMatrix()
         # position object
-        glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
-        glMaterialfv(GL_FRONT,GL_DIFFUSE,self.color.asarray())
+        gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
+        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.asarray())
         check_units('radius must have dimensions of distance', self.radius, meter)
-        glutSolidSphere(value(self.radius), 60, 60)
-        glPopMatrix()
+        glut.glutSolidSphere(value(self.radius), 60, 60)
+        gl.glPopMatrix()
     def __repr__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
 
@@ -297,34 +323,34 @@ class __display(object):
     it is only intended for name-spacing.
     '''
     def __display(self):
-        glPushMatrix()
-        gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
+        gl.glPushMatrix()
+        glu.gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
                   value(self.__center.x), value(self.__center.y), value(self.__center.z),
                   value(self.__up.x), value(self.__up.y), value(self.__up.z))
 
         lightZeroPosition = [10.,4.,10.,1.]
         lightZeroColor = [0.8,1.0,0.8,1.0] #green tinged
-        glLightfv(GL_LIGHT0, GL_POSITION, lightZeroPosition)
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightZeroColor)
-        glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 0.1)
-        glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.05)
-        glEnable(GL_LIGHT0)
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, lightZeroColor)
+        gl.glLightf(gl.GL_LIGHT0, gl.GL_CONSTANT_ATTENUATION, 0.1)
+        gl.glLightf(gl.GL_LIGHT0, gl.GL_LINEAR_ATTENUATION, 0.05)
+        gl.glEnable(gl.GL_LIGHT0)
 
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-        # glPushMatrix()
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
+        # gl.glPushMatrix()
         # color = [1.0,0.,0.,1.]
-        # glMaterialfv(GL_FRONT,GL_DIFFUSE,color)
-        # glutSolidSphere(.5,20,20)
+        # gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,color)
+        # glut.glutSolidSphere(.5,20,20)
 
-        # glTranslate(0,5,0)
-        # glutSolidSphere(.5,20,20)
-        # glPopMatrix()
+        # gl.glTranslate(0,5,0)
+        # glut.glutSolidSphere(.5,20,20)
+        # gl.glPopMatrix()
 
         for o in self.__objects:
             o._draw()
 
-        glPopMatrix()
-        glutSwapBuffers()
+        gl.glPopMatrix()
+        glut.glutSwapBuffers()
 
     def __init__(self, name = b'physical python'):
         self.__name = name
@@ -342,12 +368,12 @@ class __display(object):
         self.__is_initialized = False
 
     def __onMouse(self, btn, state, x, y):
-        if btn == GLUT_LEFT_BUTTON:
-            if state == GLUT_DOWN:
+        if btn == glut.GLUT_LEFT_BUTTON:
+            if state == glut.GLUT_DOWN:
                 self.__am_rotating = True
                 self.__x_origin = x
                 self.__y_origin = y
-            elif state == GLUT_UP:
+            elif state == glut.GLUT_UP:
                 self.__am_rotating = False
     def __onMouseMotion(self, x, y):
         if self.__am_rotating:
@@ -366,43 +392,43 @@ class __display(object):
             self.__up = R.rotate(self.__up)
             self.__x_origin = x
             self.__y_origin = y
-            glutPostRedisplay()
+            glut.glutPostRedisplay()
 
     def init(self):
         if not self.__is_initialized:
             self.__is_initialized = True
-            sys.argv = glutInit(sys.argv)
-            glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH)
+            sys.argv = glut.glutInit(sys.argv)
+            glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
             self.__windowsize = (400,400)
-            glutInitWindowSize(self.__windowsize[0],self.__windowsize[1])
-            glutCreateWindow(self.__name)
+            glut.glutInitWindowSize(self.__windowsize[0],self.__windowsize[1])
+            glut.glutCreateWindow(self.__name)
 
-            glClearColor(0.,0.,0.,1.)
-            glShadeModel(GL_SMOOTH)
-            glEnable(GL_CULL_FACE)
-            glEnable(GL_DEPTH_TEST)
-            glEnable(GL_LIGHTING)
+            gl.glClearColor(0.,0.,0.,1.)
+            gl.glShadeModel(gl.GL_SMOOTH)
+            gl.glEnable(gl.GL_CULL_FACE)
+            gl.glEnable(gl.GL_DEPTH_TEST)
+            gl.glEnable(gl.GL_LIGHTING)
 
-            glutDisplayFunc(self.__display)
-            glutMouseFunc(self.__onMouse)
-            glutMotionFunc(self.__onMouseMotion)
+            glut.glutDisplayFunc(self.__display)
+            glut.glutMouseFunc(self.__onMouse)
+            glut.glutMotionFunc(self.__onMouseMotion)
 
-            glMatrixMode(GL_PROJECTION)
-            gluPerspective(40.,1.,1.,40.)
-            glMatrixMode(GL_MODELVIEW)
-            glPushMatrix()
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            glu.gluPerspective(40.,1.,1.,40.)
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glPushMatrix()
             def sleep_forever():
                 if not self.__window_closed:
                     print('program complete, but still running visualization...')
                     while True:
-                        glutMainLoopEvent()
+                        glut.glutMainLoopEvent()
             atexit.register(sleep_forever)
 
     def timestep(self, dt):
         self.__current_time += dt.v
         now = time.time()
         if now < self.__current_time:
-            glutPostRedisplay()
+            glut.glutPostRedisplay()
             # print('waiting', self.__current_time - now)
             time.sleep(self.__current_time - now)
             # print('one frame took', time.time() - self.__last_time)
@@ -410,7 +436,7 @@ class __display(object):
         else:
             # print('I am late!')
             pass
-        glutMainLoopEvent()
+        glut.glutMainLoopEvent()
     def create_sphere(self, pos, radius, color):
         s = _Sphere(pos, radius, color)
         self.__objects.append(s)
@@ -420,6 +446,16 @@ class __display(object):
 __x = __display()
 
 def timestep(dt):
+    """Advance the simulation by time dt.
+
+    Args:
+        dt: the time in seconds (as a scalar) to advance
+
+    You *must* call 'timestep' regularly in order for your simulation
+    to be animated.  'timestep' also performs a number of cleanup
+    tasks, such as allowing user interaction with the visualization.
+
+    """
     check_units('time step dt must be a time', dt, second)
     return __x.timestep(dt)
 

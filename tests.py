@@ -25,7 +25,7 @@ class TestUnits(unittest.TestCase):
         b = 2*meter
         c = meter*1
         self.assertEqual(a-b, c)
-        self.assertTrue(has_dimensions(a, meter))
+        self.assertTrue(check_units(a, meter))
         with self.assertRaises(Exception):
             a - 1
         with self.assertRaises(Exception):
@@ -97,9 +97,6 @@ class TestUnits(unittest.TestCase):
         with self.assertRaises(Exception):
             a = vector(0,0,0)*meter
             a.x + 3
-    def test_value(self):
-        self.assertEqual(value(3*meter), 3)
-        self.assertEqual(value(3.0*meter), 3.0)
     def test_xsetter(self):
         v = vector(2,2,2)*meter
         self.assertEqual(v.x, 2*meter)
