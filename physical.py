@@ -37,6 +37,10 @@ class Units(object):
         a = self.mks
         b = units(b)
         return (a[0]-b[0], a[1]-b[1], a[2]-b[2])
+    def _rdiv(self, b):
+        a = self.mks
+        b = units(b)
+        return (b[0]-a[0], b[1]-a[1], b[2]-a[2])
     def _pow(self, b):
         if units(b) != (0,0,0):
             raise Exception('you cannot take quantity to a power with dimensions %s' % Units.__repr__(b))
@@ -102,6 +106,18 @@ def units_match(err):
         return unit_checking
     return decorator
 
+def dimensionless(err):
+    def decorator(func):
+        @functools.wraps(func)
+        def is_dimensionless(*args, **kwargs):
+            for v in list(args) + list(kwargs.values()):
+                if units(v) != (0,0,0):
+                    raise Exception(err + ': %s' % v)
+            return func(*args, **kwargs)
+        return is_dimensionless
+    return decorator
+
+@functools.total_ordering
 class scalar(Units):
     def __init__(self,v, mks=(0,0,0)):
         self.mks = mks
@@ -131,10 +147,27 @@ class scalar(Units):
             raise Exception('cannot divide scalar by vector')
         else:
             return scalar(self.v/value(b), mks)
+    def __rdiv__(self,b):
+        return self.__rtruediv__(b)
+    def __rtruediv__(self, b):
+        mks = Units._rdiv(self,b)
+        return scalar(value(b)/self.v, mks)
+    @units_match('can only compare values with same dimensions')
     def __eq__(self, b):
-        return units(b) == self.mks and value(b) == self.v
+        return value(b) == self.v
+    @units_match('can only compare values with same dimensions')
+    def __lt__(self, b):
+        return self.v < value(b)
     def __repr__(self):
         return '%s %s' % (self.v, Units._repr(self))
+
+@dimensionless('argument to sin must be dimensionless')
+def sin(x):
+    return numpy.sin(value(x))
+
+@dimensionless('argument to cos must be dimensionless')
+def cos(x):
+    return numpy.cos(value(x))
 
 meter = scalar(1, (1, 0, 0))
 kg = scalar(1, (0, 1, 0))
@@ -366,7 +399,7 @@ class __display(object):
             atexit.register(sleep_forever)
 
     def timestep(self, dt):
-        self.__current_time += dt
+        self.__current_time += dt.v
         now = time.time()
         if now < self.__current_time:
             glutPostRedisplay()
@@ -387,6 +420,7 @@ class __display(object):
 __x = __display()
 
 def timestep(dt):
+    check_units('time step dt must be a time', dt, second)
     return __x.timestep(dt)
 
 def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_Color(1,1,1)):

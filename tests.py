@@ -65,6 +65,7 @@ class TestUnits(unittest.TestCase):
     def test_division(self):
         a = 2*meter
         b = 4*meter
+        self.assertEqual(2*meter/second, 2/second*meter)
         self.assertEqual(b/a, 2)
         self.assertEqual(a/b, 0.5)
         v = vector(1,2,3)*second
