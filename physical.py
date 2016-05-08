@@ -76,6 +76,13 @@ def value(v):
         return v.v
     return v
 def check_units(err, *vals):
+    """Verifies that the arguments have the same units.
+
+    Args:
+        err: a string giving the error message when units fail to match.
+    Raises:
+        Exception: the units do not match
+    """
     # values of zero do not need units
     def is_not_boring(v):
         return not ((not hasattr(v, 'mks') and v == 0)
@@ -179,22 +186,35 @@ class scalar(Units):
         return '%s %s' % (self.v, Units._repr(self))
 
 def sqrt(v):
+    '''The square root of a value.'''
     return v**0.5
 
 @dimensionless('argument to sin must be dimensionless')
 def sin(x):
+    '''The sine of a value.'''
     return numpy.sin(value(x))
 
 @dimensionless('argument to cos must be dimensionless')
 def cos(x):
+    '''The cosine of a value.'''
     return numpy.cos(value(x))
 
 @dimensionless('argument to tan must be dimensionless')
 def tan(x):
+    '''The tangent of a value.'''
     return numpy.cos(value(x))
 
 @units_match('arguments to atan2 must have the same units')
 def atan2(y,x):
+    '''The inverse tangent of a y/x.
+
+    You should almost always prefer 'atan2' over any other inverse
+    trig functions, because it can (and does) properly determine the
+    quadrant of the point described by the angle, so it can give you
+    an unambiguous answer.  For this reason we do not export any of
+    the other inverse trig functions.
+
+    '''
     return numpy.atan2(value(y)/value(x))
 
 meter = scalar(1, (1, 0, 0))
@@ -287,13 +307,13 @@ class _rotation(object):
         sinalpha = math.sin(self.angle)
         return vperp*cosalpha + self.axis.cross(v)*sinalpha + vpar
 
-class _Color(object):
+class _RGB(object):
     def __init__(self, r,g,b):
         self.r = r; self.g = g; self.b = b
     def asarray(self):
         return [self.r, self.g, self.b]
     def copy(self):
-        return _Color(self.r, self.g, self.b)
+        return _RGB(self.r, self.g, self.b)
 
 class _Sphere(object):
     def __init__(self, pos, radius, color):
@@ -459,9 +479,17 @@ def timestep(dt):
     check_units('time step dt must be a time', dt, second)
     return __x.timestep(dt)
 
-def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_Color(1,1,1)):
+def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=_RGB(1,1,1)):
+    """Create a sphere object.
+
+    Args:
+        pos: the initial position of the sphere in meters (defaults
+            to the origin)
+        radius: the radius of the sphere in meters
+        color: the color of the sphere
+    """
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_sphere(pos.copy(), radius, color.copy())
 
-red = _Color(1,0,0)
+red = _RGB(1,0,0)
