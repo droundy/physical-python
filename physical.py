@@ -207,7 +207,7 @@ class vector(Units):
     def __eq__(self,b):
         return type(b) == vector and self.mks == b.mks and self._x == b._x and self._y == b._y and self._z == b._z
     def __repr__(self):
-        return '<%s,%s,%s>' % (self.x, self.y, self.z)
+        return '<%s,%s,%s> %s' % (self._x, self._y, self._z, Units._repr(self))
     def copy(self):
         return vector(self.x, self.y, self.z)
 
