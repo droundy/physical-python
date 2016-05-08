@@ -123,6 +123,8 @@ class scalar(Units):
             return scalar(self.v*value(b), mks)
     def __rmul__(self, b):
         return scalar(b*self.v, self.mks)
+    def __div__(self,b):
+        return self.__truediv__(b)
     def __truediv__(self, b):
         mks = Units._div(self, b)
         if type(b) == vector:
@@ -200,6 +202,8 @@ class vector(Units):
             raise Exception('can only multipy vectors with scalars')
         mks = Units._mul(self, s)
         return vector(self.x*value(s), self.y*value(s), self.z*value(s), mks)
+    def __div__(self,b):
+        return self.__truediv__(b)
     def __truediv__(self, s):
         if not is_scalar(s):
             raise Exception('can only divide vectors by scalars')
