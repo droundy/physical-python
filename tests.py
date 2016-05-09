@@ -86,8 +86,6 @@ class TestUnits(unittest.TestCase):
         self.assertEqual(b*a, 8*meter**2)
         v = vector(1,2,3)*second
         vv = second*vector(1,2,3)
-        self.assertEqual(vector(0,0,0).mks, (0,0,0))
-        self.assertEqual(v.mks, (0,0,1))
         self.assertEqual(v,vv)
         self.assertEqual(v*a, vector(2,4,6)*second*meter)
         self.assertEqual(a*v, vector(2,4,6)*second*meter)

@@ -42,36 +42,36 @@ def is_scalar(s):
     return not is_vector(s)
 class Units(object):
     def __init__(self, m, kg, s):
-        self.mks = (m,kg,s)
+        self._mks = (m,kg,s)
     def _add(self, b):
-        if self.mks != units(b):
+        if self._mks != units(b):
             raise Exception('you cannot add quantities with differing units: {} + {}'.format(self,b))
-        return self.mks
+        return self._mks
     def _sub(self, b):
-        if self.mks != units(b):
+        if self._mks != units(b):
             raise Exception('you cannot subtract quantities with differing units: {} + {}'.format(self,b))
-        return self.mks
+        return self._mks
     def _mul(self, b):
-        a = self.mks
+        a = self._mks
         b = units(b)
         return (a[0]+b[0], a[1]+b[1], a[2]+b[2])
     def _div(self, b):
-        a = self.mks
+        a = self._mks
         b = units(b)
         return (a[0]-b[0], a[1]-b[1], a[2]-b[2])
     def _rdiv(self, b):
-        a = self.mks
+        a = self._mks
         b = units(b)
         return (b[0]-a[0], b[1]-a[1], b[2]-a[2])
     def _pow(self, b):
         if units(b) != (0,0,0):
             raise Exception('you cannot take quantity to a power with dimensions %s' % Units.__repr__(b))
-        a = self.mks
+        a = self._mks
         return (a[0]*b, a[1]*b, a[2]*b)
     def _eq(self, b):
-        return self.mks == b.mks
+        return self._mks == b._mks
     def _repr(self):
-        (m,kg,s) =self.mks
+        (m,kg,s) =self._mks
         r = []
         if m == 1:
             r.append('meter')
@@ -88,8 +88,8 @@ class Units(object):
         return '*'.join(r)
 
 def units(v):
-    if hasattr(v, 'mks'):
-        return v.mks
+    if hasattr(v, '_mks'):
+        return v._mks
     return (0,0,0)
 def value(v):
     if hasattr(v, 'v'):
@@ -109,8 +109,8 @@ def check_units(err, *vals):
     """
     # values of zero do not need units
     def is_not_boring(v):
-        return not ((not hasattr(v, 'mks') and v == 0)
-                    or (type(v) == vector and v.mks == (0,0,0) and
+        return not ((not hasattr(v, '_mks') and v == 0)
+                    or (type(v) == vector and v._mks == (0,0,0) and
                         v.x == 0 and v.y == 0 and v.z == 0))
     vals = list(filter(is_not_boring, vals))
     if len(vals) >= 2:
@@ -121,8 +121,8 @@ def check_units(err, *vals):
     return True
 
 def __is_not_boring(v):
-    return not ((not hasattr(v, 'mks') and v == 0)
-                or (type(v) == vector and v.mks == (0,0,0) and
+    return not ((not hasattr(v, '_mks') and v == 0)
+                or (type(v) == vector and v._mks == (0,0,0) and
                     v.x == 0 and v.y == 0 and v.z == 0)
                 or type(v) == type(None))
 def units_match(err):
@@ -169,7 +169,7 @@ class scalar(Units):
         Returns:
            returns nothing
         """
-        self.mks = mks
+        self._mks = mks
         self.v = v
     def __add__(self, b):
         mks = Units._add(self, b)
@@ -187,7 +187,7 @@ class scalar(Units):
         else:
             return scalar(self.v*value(b), mks)
     def __rmul__(self, b):
-        return scalar(b*self.v, self.mks)
+        return scalar(b*self.v, self._mks)
     def __div__(self,b):
         return self.__truediv__(b)
     def __truediv__(self, b):
@@ -276,20 +276,20 @@ second = scalar(1, (0, 0, 1))
 class vector(Units):
     def __init__(self,x,y,z, mks=(0,0,0)):
         check_units('vector components must have same dimensions', x,y,z)
-        self.mks = mks
+        self._mks = mks
         if mks == (0,0,0):
             if units(x) != mks:
-                self.mks = units(x)
+                self._mks = units(x)
             elif units(y) != mks:
-                self.mks = units(y)
+                self._mks = units(y)
             elif units(z) != mks:
-                self.mks = units(z)
+                self._mks = units(z)
         self._x = value(x)
         self._y = value(y)
         self._z = value(z)
     @property
     def x(self):
-        return scalar(self._x, self.mks)
+        return scalar(self._x, self._mks)
     @x.setter
     @units_match('x component must have dimensions of vector')
     def x(self,v):
@@ -297,7 +297,7 @@ class vector(Units):
 
     @property
     def y(self):
-        return scalar(self._y, self.mks)
+        return scalar(self._y, self._mks)
     @y.setter
     @units_match('y component must have dimensions of vector')
     def y(self,v):
@@ -305,7 +305,7 @@ class vector(Units):
 
     @property
     def z(self):
-        return scalar(self._z, self.mks)
+        return scalar(self._z, self._mks)
     @z.setter
     @units_match('z component must have dimensions of vector')
     def z(self,v):
@@ -319,12 +319,12 @@ class vector(Units):
     def abs(self):
         return abs(self)
     def __abs__(self):
-        return scalar(math.sqrt(self.x.v**2 + self.y.v**2 + self.z.v**2), self.mks)
+        return scalar(math.sqrt(self.x.v**2 + self.y.v**2 + self.z.v**2), self._mks)
     def normalized(self):
         return self / self.abs()
     @units_match('can only add vectors with same dimension')
     def __add__(self, b):
-        return vector(self._x+b._x, self._y + b._y, self._z + b._z, self.mks)
+        return vector(self._x+b._x, self._y + b._y, self._z + b._z, self._mks)
     @units_match('can only subtract vectors with same dimension')
     def __sub__(self, b):
         return vector(self.x-b.x, self.y - b.y, self.z - b.z)
@@ -345,7 +345,7 @@ class vector(Units):
             raise Exception('can only divide vectors by scalars')
         return vector(self.x/s, self.y/s, self.z/s)
     def __eq__(self,b):
-        return type(b) == vector and self.mks == b.mks and self._x == b._x and self._y == b._y and self._z == b._z
+        return type(b) == vector and self._mks == b._mks and self._x == b._x and self._y == b._y and self._z == b._z
     def __repr__(self):
         return '<%s,%s,%s> %s' % (self._x, self._y, self._z, Units._repr(self))
     def copy(self):
@@ -721,8 +721,8 @@ def helix(pos1, pos2,
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
-    pos1.mks = (1,0,0) # in case it is the zero vector
-    pos2.mks = (1,0,0) # in case it is the zero vector
+    pos1._mks = (1,0,0) # in case it is the zero vector
+    pos2._mks = (1,0,0) # in case it is the zero vector
     check_units('radius must have dimensions of distance', radius, meter)
     if length == None:
         d = abs(position(pos2) - position(pos1))
@@ -750,8 +750,8 @@ def cylinder(pos1, pos2,
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
-    pos1.mks = (1,0,0) # in case it is the zero vector
-    pos2.mks = (1,0,0) # in case it is the zero vector
+    pos1._mks = (1,0,0) # in case it is the zero vector
+    pos2._mks = (1,0,0) # in case it is the zero vector
     check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_cylinder(pos1, pos2,
                                radius, color.copy())
