@@ -12,7 +12,7 @@ __all__ = ('scalar', 'vector',
            'color',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
-           'sphere', 'helix', 'cylinder',
+           'sphere', 'helix', 'cylinder', 'box',
            'timestep', 'savepng',
            'minimum_fps',
            'meter', 'second', 'kg')
@@ -451,6 +451,35 @@ class _Cylinder(object):
     def __repr__(self):
         return 'cylinder(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
 
+class _Box(object):
+    '''A box is a rectangular prism oriented along the x, y, and z axes.
+
+    While it would be reasonable to be able to rotate the orientation
+    of a box, we do not currently permit this.
+
+    '''
+    def __init__(self, pos, wx, wy, wz, color):
+        check_units('box dimensions must be distances', pos, wx, wy, wz)
+        self.pos = pos
+        self.wx = wx
+        self.wy = wy
+        self.wz = wz
+        self.color = color
+    def _draw(self):
+        # use a fresh transformation matrix
+        gl.glPushMatrix()
+        # position object
+        gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
+        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
+        check_units('box dimensions must be distances', self.wx, self.wy, self.wz, meter)
+        gl.glScale(value(self.wx), value(self.wy), value(self.wz))
+        glut.glutSolidCube(1)
+        gl.glPopMatrix()
+    def __str__(self):
+        return 'box(%s, %s, %s, %s)' % (self.pos, self.wx, self.wy, self.wz)
+    def __repr__(self):
+        return 'box(%s, %s, %s, %s)' % (self.pos, self.wx, self.wy, self.wz)
+
 class __display(object):
     '''
     The private class __display exists to conveniently hide our
@@ -609,6 +638,11 @@ class __display(object):
         self.__objects.append(h)
         self.init()
         return h
+    def create_box(self, pos, wx, wy, wz, color):
+        h = _Box(pos, wx, wy, wz, color)
+        self.__objects.append(h)
+        self.init()
+        return h
 
 __x = __display()
 
@@ -695,6 +729,20 @@ def cylinder(pos1, pos2,
     check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_cylinder(pos1, pos2,
                                radius, color.copy())
+
+def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
+    """Create a box object.
+
+    Args:
+        pos: the initial position of the center of the box
+        wx: the width of the box in the x direction
+        wy: the width of the box in the y direction
+        wz: the width of the box in the z direction
+        color: the color of the cylinder
+    """
+    check_units('box dimensions must be distances',
+                pos, wx, wy, wz, meter)
+    return __x.create_box(pos, wx, wy, wz, color.copy())
 
 def savepng(fname):
     __x._save(fname)
