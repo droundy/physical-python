@@ -13,7 +13,7 @@ __all__ = ('scalar', 'vector',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'sphere', 'helix', 'cylinder',
-           'timestep',
+           'timestep', 'savepng',
            'meter', 'second', 'kg')
 
 try:
@@ -457,14 +457,14 @@ class __display(object):
     this could allow us to support multiple windows, but in practice
     it is only intended for name-spacing.
     '''
-    def __display(self):
+    def __drawstuff(self):
         gl.glPushMatrix()
         glu.gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
                   value(self.__center.x), value(self.__center.y), value(self.__center.z),
                   value(self.__up.x), value(self.__up.y), value(self.__up.z))
 
         lightZeroPosition = [10.,4.,10.,1.]
-        lightZeroColor = [0.8,1.0,0.8,1.0] #green tinged
+        lightZeroColor = [0.8,0.8,0.9,1.0] # blue-tinged shadows
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, lightZeroColor)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_CONSTANT_ATTENUATION, 0.1)
@@ -477,7 +477,19 @@ class __display(object):
             o._draw()
 
         gl.glPopMatrix()
+
+    def __display(self):
+        self.__drawstuff()
         glut.glutSwapBuffers()
+
+    def _save(self, fname):
+        from PIL import Image
+        self.__drawstuff()
+        gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
+        width = self.__windowsize[0]
+        height = self.__windowsize[1]
+        data = gl.glReadPixels(0, 0, width, height, gl.GL_RGB, gl.GL_UNSIGNED_BYTE)
+        Image.fromstring("RGB", (width, height), data).save(fname)
 
     def __init__(self, name = b'physical python'):
         self.__name = name
@@ -665,3 +677,6 @@ def cylinder(pos1, pos2,
     check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_cylinder(pos1, pos2,
                                radius, color.copy())
+
+def savepng(fname):
+    __x._save(fname)
