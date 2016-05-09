@@ -3,6 +3,9 @@
 import time, numpy
 from physical import *
 
+cyl = cylinder(vector(0,0,0), vector(1,0,0)*meter,
+               radius=0.05*meter, color=color.green)
+
 s = sphere()
 s2 = sphere()
 s.color = color.blue

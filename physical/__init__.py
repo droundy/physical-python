@@ -12,7 +12,7 @@ __all__ = ('scalar', 'vector',
            'color',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
-           'sphere', 'helix',
+           'sphere', 'helix', 'cylinder',
            'timestep',
            'meter', 'second', 'kg')
 
@@ -403,12 +403,51 @@ class _Helix(object):
                         0.0, # startTheta
                         360.0*self.twists # sweepTheta
         )
-        glut.glutSolidSphere(value(self.radius), 60, 60)
         gl.glPopMatrix()
     def __str__(self):
         return 'helix(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
     def __repr__(self):
         return 'helix(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
+
+class _Cylinder(object):
+    def __init__(self, pos1, pos2, radius, color):
+        self.pos1 = pos1
+        self.pos2 = pos2
+        self.radius = radius
+        self.color = color
+    def _draw(self):
+        # use a fresh transformation matrix
+        gl.glPushMatrix()
+        gle.gleSetJoinStyle (gle.TUBE_NORM_EDGE | gle.TUBE_JN_ANGLE | gle.TUBE_JN_CAP)
+        # position object
+        pos1 = position(self.pos1)
+        pos2 = position(self.pos2)
+        gl.glTranslate(value(pos1.x), value(pos1.y), value(pos1.z))
+        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
+        check_units('radius must have dimensions of distance', self.radius, meter)
+        check_units('position must be a distance', pos1, pos2, meter)
+        dr = pos2 - pos1
+        dist = abs(dr)
+        axis = dr.cross(vector(0,0,1))
+        mysin = abs(axis)/dist
+        mycos = dr.z/dist
+        angle = -atan2(mysin,mycos)*180/math.pi
+        gl.glRotate(angle, value(axis.x),value(axis.y),value(axis.z))
+        gle.gleHelicoid(value(self.radius), # rToroid
+                        0, # startRadius
+                        0, # drdTheta
+                        0, # startz
+                        value(dist), # dzdTheta
+                        None, # startXform
+                        None, # dXformdTheta
+                        0.0, # startTheta
+                        360.0 # sweepTheta
+        )
+        gl.glPopMatrix()
+    def __str__(self):
+        return 'cylinder(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
+    def __repr__(self):
+        return 'cylinder(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
 
 class __display(object):
     '''
@@ -534,6 +573,11 @@ class __display(object):
         self.__objects.append(h)
         self.init()
         return h
+    def create_cylinder(self, pos1, pos2, radius, color):
+        h = _Cylinder(pos1, pos2, radius, color)
+        self.__objects.append(h)
+        self.init()
+        return h
 
 __x = __display()
 
@@ -588,6 +632,8 @@ def helix(pos1, pos2,
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
+    pos1.mks = (1,0,0) # in case it is the zero vector
+    pos2.mks = (1,0,0) # in case it is the zero vector
     check_units('radius must have dimensions of distance', radius, meter)
     if length == None:
         d = abs(position(pos2) - position(pos1))
@@ -596,3 +642,25 @@ def helix(pos1, pos2,
     return __x.create_helix(pos1, pos2,
                             radius, color.copy(), length=length,
                             twists=twists)
+
+def cylinder(pos1, pos2,
+             radius=0.1*meter, color=color.RGB(1,1,1)):
+    """Create a cylinder object.
+
+    Args:
+        pos1: the initial position of one end of the cylinder.  This may
+            be an object that has a position, in which case the cylinder
+            will be attached to that object as it moves.
+        pos2: the initial position of the other end of the cylinder.
+            This may be an object that has a position, in which case
+            the cylinder will be attached to that object as it moves.
+        radius: the radius of the cylinder in meters
+        color: the color of the cylinder
+    """
+    check_units('position must be a distance',
+                position(pos1), position(pos2), meter)
+    pos1.mks = (1,0,0) # in case it is the zero vector
+    pos2.mks = (1,0,0) # in case it is the zero vector
+    check_units('radius must have dimensions of distance', radius, meter)
+    return __x.create_cylinder(pos1, pos2,
+                               radius, color.copy())
