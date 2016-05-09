@@ -3,18 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to physical-python's documentation!
-===========================================
-
-Contents:
+The physical python module
+==========================
 
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: physical
-   :members:
+   physical-color.rst
 
-.. automodule:: physical.color
+.. automodule:: physical
    :members:
 
 Indices and tables

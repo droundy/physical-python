@@ -1,7 +1,9 @@
 """
-The physical python module
-
-This module is nice.
+A python package aimed at teaching students physics through having
+them program using 3d simulation. A key goal is to provide clear error
+messages for mistakes common among intro physics students. Physical is
+inspired by the visual package, but aims to provide improved error
+messages and assignment semantics.
 """
 
 from __future__ import division, print_function
