@@ -1,0 +1,15 @@
+# | make html
+# c .pyc
+# c ~
+# c .tum
+
+| sphinx-build -W -b html -d _build/doctrees   . _build/html
+c .pyc
+c ~
+c .tum
+
+| python3 tests.py
+c .pyc
+
+| python2 tests.py
+c .pyc

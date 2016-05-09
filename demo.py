@@ -3,19 +3,26 @@
 import time, numpy
 from physical import *
 
+cyl = cylinder(vector(0,0,0), vector(1,0,0)*meter,
+               radius=0.05*meter, color=color.green)
+
 s = sphere()
 s2 = sphere()
-origin = sphere(radius=0.1*meter, color=red)
+s.color = color.blue
+origin = sphere(radius=0.1*meter, color=color.red)
 
 print(s.pos)
 s.pos.x = 1.1*meter
 
 s2.pos.x = -1.1*meter
 
-t = 0
-dt = 0.001
-while t < 10:
-    s.pos.x = 2*meter*numpy.sin(2*numpy.pi*t)
-    s2.pos.z = 2*meter*numpy.cos(numpy.pi*t)
+h = helix(s, s2)
+
+t = 0*second
+dt = 0.001*second
+omega = numpy.pi/second
+while t < 10*second:
+    s.pos.x = 3*meter*sin(2*omega*t)
+    s2.pos.z = 3*meter*cos(omega*t)
     timestep(dt)
     t += dt
