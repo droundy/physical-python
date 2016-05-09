@@ -21,7 +21,7 @@ h = helix(s, s2)
 savepng('/tmp/demo.png')
 
 t = 0*second
-dt = 0.0001*second
+dt = 0.00001*second
 omega = numpy.pi/second
 while t < 9.5*second:
     s.pos.x = 3*meter*sin(2*omega*t)

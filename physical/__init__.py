@@ -465,12 +465,20 @@ class __display(object):
                   value(self.__up.x), value(self.__up.y), value(self.__up.z))
 
         lightZeroPosition = [10.,4.,10.,1.]
-        lightZeroColor = [0.8,0.8,0.9,1.0] # blue-tinged shadows
+        lightZeroColor = [1,1,1,1.0]
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, lightZeroColor)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_CONSTANT_ATTENUATION, 0.1)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_LINEAR_ATTENUATION, 0.05)
         gl.glEnable(gl.GL_LIGHT0)
+
+        lightOnePosition = [6.,4.,10.,1.]
+        lightOneColor = [0.2,0.2,0.4,1.0] # blue-tinged shadows
+        gl.glLightfv(gl.GL_LIGHT1, gl.GL_POSITION, lightOnePosition)
+        gl.glLightfv(gl.GL_LIGHT1, gl.GL_AMBIENT, lightOneColor)
+        gl.glLightf(gl.GL_LIGHT1, gl.GL_CONSTANT_ATTENUATION, 0.1)
+        gl.glLightf(gl.GL_LIGHT1, gl.GL_LINEAR_ATTENUATION, 0.05)
+        gl.glEnable(gl.GL_LIGHT1)
 
         if self.__am_slow:
             gl.glClearColor(0.2,0.,0.,1.)
@@ -562,6 +570,7 @@ class __display(object):
             gl.glMatrixMode(gl.GL_MODELVIEW)
             gl.glPushMatrix()
             def sleep_forever():
+                self.__am_slow = False
                 if not self.__window_closed:
                     print('program complete, but still running visualization...')
                     while True:
