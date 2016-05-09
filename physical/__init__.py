@@ -122,7 +122,8 @@ def check_units(err, *vals):
 def __is_not_boring(v):
     return not ((not hasattr(v, 'mks') and v == 0)
                 or (type(v) == vector and v.mks == (0,0,0) and
-                    v.x == 0 and v.y == 0 and v.z == 0))
+                    v.x == 0 and v.y == 0 and v.z == 0)
+                or type(v) == type(None))
 def units_match(err):
     def decorator(func):
         @functools.wraps(func)
@@ -589,7 +590,9 @@ def helix(pos1, pos2,
                 position(pos1), position(pos2), meter)
     check_units('radius must have dimensions of distance', radius, meter)
     if length == None:
-        length = 2*twists*abs(position(pos2) - position(pos1))
+        d = abs(position(pos2) - position(pos1))
+        length = sqrt(d**2 + (5*2*math.pi*radius*twists)**2)
+    check_units('length must have dimensions of distance', length, meter)
     return __x.create_helix(pos1, pos2,
                             radius, color.copy(), length=length,
                             twists=twists)
