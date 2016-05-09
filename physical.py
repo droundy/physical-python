@@ -185,9 +185,10 @@ class vector(Units):
         return scalar(math.sqrt(self.x.v**2 + self.y.v**2 + self.z.v**2), self.mks)
     def normalized(self):
         return self / self.abs()
+    @units_match('can only add vectors with same dimension')
     def __add__(self, b):
-        check_units('can only add vectors with same dimensions', b, self)
         return vector(self._x+b._x, self._y + b._y, self._z + b._z, self.mks)
+    @units_match('can only subtract vectors with same dimension')
     def __sub__(self, b):
         return vector(self.x-b.x, self.y - b.y, self.z - b.z)
     def __mul__(self, s):
