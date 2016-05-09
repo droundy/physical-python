@@ -210,6 +210,11 @@ def sqrt(v):
     '''The square root of a value.'''
     return v**0.5
 
+@dimensionless('argument to exp must be dimensionless')
+def exp(x):
+    '''Computes $e^x$.'''
+    return numpy.exp(value(x))
+
 @dimensionless('argument to sin must be dimensionless')
 def sin(x):
     '''The sine of a value.'''
