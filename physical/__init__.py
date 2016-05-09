@@ -217,7 +217,7 @@ def exp(x):
 
 @dimensionless('argument to sin must be dimensionless')
 def sin(x):
-    '''The sine of a value.'''
+    r'''The function $\sin(x)$.'''
     return numpy.sin(value(x))
 
 @dimensionless('argument to cos must be dimensionless')
