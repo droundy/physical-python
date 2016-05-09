@@ -21,7 +21,12 @@ try:
     import OpenGL.GL as gl
 except:
     print('Unable to load opengl, things will break')
-import sys, math, atexit, time, numpy, traceback
+try:
+    import numpy
+except:
+    print('Using math instead of numpy, things may break')
+    import math as numpy
+import sys, math, atexit, time, traceback
 import functools
 
 import physical.color
