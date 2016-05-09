@@ -7,3 +7,9 @@
 c .pyc
 c ~
 c .tum
+
+| python3 tests.py
+c .pyc
+
+| python2 tests.py
+c .pyc

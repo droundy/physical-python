@@ -14,10 +14,13 @@ __all__ = ('scalar', 'vector',
            'timestep',
            'meter', 'second', 'kg')
 
-import OpenGL.GLUT as glut
-import OpenGL.GLU as glu
-import OpenGL.GLE as gle
-import OpenGL.GL as gl
+try:
+    import OpenGL.GLUT as glut
+    import OpenGL.GLU as glu
+    import OpenGL.GLE as gle
+    import OpenGL.GL as gl
+except:
+    print('Unable to load opengl, things will break')
 import sys, math, atexit, time, numpy, traceback
 import functools
 
@@ -412,14 +415,6 @@ class __display(object):
         gl.glEnable(gl.GL_LIGHT0)
 
         gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
-        # gl.glPushMatrix()
-        # color = [1.0,0.,0.,1.]
-        # gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,color)
-        # glut.glutSolidSphere(.5,20,20)
-
-        # gl.glTranslate(0,5,0)
-        # glut.glutSolidSphere(.5,20,20)
-        # gl.glPopMatrix()
 
         for o in self.__objects:
             o._draw()
