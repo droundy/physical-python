@@ -14,6 +14,7 @@ __all__ = ('scalar', 'vector',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'sphere', 'helix', 'cylinder',
            'timestep', 'savepng',
+           'minimum_fps',
            'meter', 'second', 'kg')
 
 try:
@@ -471,6 +472,10 @@ class __display(object):
         gl.glLightf(gl.GL_LIGHT0, gl.GL_LINEAR_ATTENUATION, 0.05)
         gl.glEnable(gl.GL_LIGHT0)
 
+        if self.__am_slow:
+            gl.glClearColor(0.2,0.,0.,1.)
+        else:
+            gl.glClearColor(0.,0.,0.,1.)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
 
         for o in self.__objects:
@@ -505,6 +510,7 @@ class __display(object):
         self.__start_time = time.time()
         self.__current_time = time.time()
         self.__is_initialized = False
+        self.__am_slow = False
 
     def __onMouse(self, btn, state, x, y):
         if btn == glut.GLUT_LEFT_BUTTON:
@@ -542,7 +548,6 @@ class __display(object):
             glut.glutInitWindowSize(self.__windowsize[0],self.__windowsize[1])
             glut.glutCreateWindow(self.__name)
 
-            gl.glClearColor(0.,0.,0.,1.)
             gl.glShadeModel(gl.GL_SMOOTH)
             gl.glEnable(gl.GL_CULL_FACE)
             gl.glEnable(gl.GL_DEPTH_TEST)
@@ -567,13 +572,17 @@ class __display(object):
         self.__current_time += dt.v
         now = time.time()
         if now < self.__current_time:
+            self.__am_slow = False
             glut.glutPostRedisplay()
-            # print('waiting', self.__current_time - now)
+            # print('waiting', self.__current_time - now, 'out of', dt)
             time.sleep(self.__current_time - now)
             # print('one frame took', time.time() - self.__last_time)
             self.__last_time = time.time()
+        elif now > self.__last_time + 0.1:
+            self.__am_slow = True
+            glut.glutPostRedisplay()
+            self.__last_time = time.time()
         else:
-            # print('I am late!')
             pass
         glut.glutMainLoopEvent()
     def create_sphere(self, pos, radius, color):
@@ -680,3 +689,6 @@ def cylinder(pos1, pos2,
 
 def savepng(fname):
     __x._save(fname)
+
+#: the minimum frames per second that the renderer will draw.
+minimum_fps = 0.1/second
