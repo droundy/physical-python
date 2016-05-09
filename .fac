@@ -1,7 +1,9 @@
-| pydoc3 -w physical
-c .pyc
-c ~
+# | make html
+# c .pyc
+# c ~
+# c .tum
 
-| pydoc3 -w physical.color
+| sphinx-build -W -b html -d _build/doctrees   . _build/html
 c .pyc
 c ~
+c .tum

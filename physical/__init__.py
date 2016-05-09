@@ -1,3 +1,9 @@
+"""
+The physical python module
+
+This module is nice.
+"""
+
 from __future__ import division, print_function
 
 __all__ = ('scalar', 'vector',
@@ -534,7 +540,8 @@ def timestep(dt):
     return __x.timestep(dt)
 
 def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
-    """Create a sphere object.
+    """
+    Create a sphere object.
 
     Args:
         pos: the initial position of the sphere in meters (defaults
