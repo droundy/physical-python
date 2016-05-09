@@ -8,7 +8,7 @@ messages and assignment semantics.
 
 from __future__ import division, print_function
 
-__all__ = ('scalar', 'vector',
+__all__ = ('vector',
            'color',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
@@ -216,22 +216,38 @@ def sqrt(v):
 
 @dimensionless('argument to exp must be dimensionless')
 def exp(x):
-    '''Compute :math:`e^x`.'''
+    '''Compute :math:`e^x`.
+
+    Raises:
+        Exception: x is not dimensionless
+    '''
     return numpy.exp(value(x))
 
 @dimensionless('argument to sin must be dimensionless')
 def sin(x):
-    r'''Compute :math:`\sin(x)`.'''
+    r'''Compute :math:`\sin(x)`.
+
+    Raises:
+        Exception: x is not dimensionless
+    '''
     return numpy.sin(value(x))
 
 @dimensionless('argument to cos must be dimensionless')
 def cos(x):
-    r'''Compute :math:`\cos(x)`.'''
+    r'''Compute :math:`\cos(x)`.
+
+    Raises:
+        Exception: x is not dimensionless
+    '''
     return numpy.cos(value(x))
 
 @dimensionless('argument to tan must be dimensionless')
 def tan(x):
-    r'''Compute :math:`\tan(x)`.'''
+    r'''Compute :math:`\tan(x)`.
+
+    Raises:
+        Exception: x is not dimensionless
+    '''
     return numpy.cos(value(x))
 
 @units_match('arguments to atan2 must have the same units')
@@ -241,6 +257,8 @@ def atan2(y,x):
     Args:
         y: the "vertical" component of a vector
         x: the "horizontal" component of the vector
+    Raises:
+        Exception: x and y do not have the same dimensions
 
     You should almost always prefer 'atan2' over any other inverse
     trig functions, because it can (and does) properly determine the
@@ -651,6 +669,8 @@ def timestep(dt):
 
     Args:
         dt: the time in seconds (as a scalar) to advance
+    Raises:
+        Exception: dt is not a time
 
     You *must* call 'timestep' regularly in order for your simulation
     to be animated.  'timestep' also performs a number of cleanup
@@ -669,6 +689,8 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
             to the origin)
         radius: the radius of the sphere in meters
         color: the color of the sphere
+    Raises:
+        Exception: the dimensions are not distances
     """
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
@@ -693,6 +715,8 @@ def helix(pos1, pos2,
             specified, this defaults to 2*twists*the distance between
             the two ends.
         twists: the number of twists in the wire
+    Raises:
+        Exception: the dimensions are not distances
 
     """
     check_units('position must be a distance',
@@ -721,6 +745,8 @@ def cylinder(pos1, pos2,
             the cylinder will be attached to that object as it moves.
         radius: the radius of the cylinder in meters
         color: the color of the cylinder
+    Raises:
+        Exception: the dimensions are not distances
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -739,6 +765,8 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
         wy: the width of the box in the y direction
         wz: the width of the box in the z direction
         color: the color of the cylinder
+    Raises:
+        Exception: the dimensions are not distances
     """
     check_units('box dimensions must be distances',
                 pos, wx, wy, wz, meter)
