@@ -9,7 +9,7 @@ from __future__ import division, print_function
 __all__ = ('scalar', 'vector',
            'color',
            'check_units', 'dimensionless',
-           'sqrt', 'sin', 'cos', 'tan', 'atan2',
+           'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'sphere', 'helix',
            'timestep',
            'meter', 'second', 'kg')
@@ -207,32 +207,36 @@ class scalar(Units):
         return '%s %s' % (self.v, Units._repr(self))
 
 def sqrt(v):
-    '''The square root of a value.'''
+    r'''Compute :math:`\sqrt{x}`.'''
     return v**0.5
 
 @dimensionless('argument to exp must be dimensionless')
 def exp(x):
-    '''Computes $e^x$.'''
+    '''Compute :math:`e^x`.'''
     return numpy.exp(value(x))
 
 @dimensionless('argument to sin must be dimensionless')
 def sin(x):
-    r'''The function $\sin(x)$.'''
+    r'''Compute :math:`\sin(x)`.'''
     return numpy.sin(value(x))
 
 @dimensionless('argument to cos must be dimensionless')
 def cos(x):
-    '''The cosine of a value.'''
+    r'''Compute :math:`\cos(x)`.'''
     return numpy.cos(value(x))
 
 @dimensionless('argument to tan must be dimensionless')
 def tan(x):
-    '''The tangent of a value.'''
+    r'''Compute :math:`\tan(x)`.'''
     return numpy.cos(value(x))
 
 @units_match('arguments to atan2 must have the same units')
 def atan2(y,x):
-    '''The inverse tangent of a y/x.
+    r'''Compute :math:`\tan^{-1}\left(\frac{y}{x}\right)`.
+
+    Args:
+        y: the "vertical" component of a vector
+        x: the "horizontal" component of the vector
 
     You should almost always prefer 'atan2' over any other inverse
     trig functions, because it can (and does) properly determine the
