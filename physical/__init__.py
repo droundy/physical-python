@@ -4,12 +4,13 @@ __all__ = ('scalar', 'vector',
            'color',
            'check_units', 'dimensionless',
            'sqrt', 'sin', 'cos', 'tan', 'atan2',
-           'sphere',
+           'sphere', 'helix',
            'timestep',
            'meter', 'second', 'kg')
 
 import OpenGL.GLUT as glut
 import OpenGL.GLU as glu
+import OpenGL.GLE as gle
 import OpenGL.GL as gl
 import sys, math, atexit, time, numpy, traceback
 import functools
@@ -76,6 +77,10 @@ def units(v):
 def value(v):
     if hasattr(v, 'v'):
         return v.v
+    return v
+def position(v):
+    if hasattr(v, 'pos'):
+        return v.pos
     return v
 def check_units(err, *vals):
     """Verifies that the arguments have the same units.
@@ -217,7 +222,7 @@ def atan2(y,x):
     the other inverse trig functions.
 
     '''
-    return numpy.atan2(value(y)/value(x))
+    return numpy.arctan2(value(y),value(x))
 
 meter = scalar(1, (1, 0, 0))
 kg = scalar(1, (0, 1, 0))
@@ -267,6 +272,8 @@ class vector(Units):
     def dot(self,b):
         return self.x*b.x + self.y*b.y + self.z*b.z
     def abs(self):
+        return abs(self)
+    def __abs__(self):
         return scalar(math.sqrt(self.x.v**2 + self.y.v**2 + self.z.v**2), self.mks)
     def normalized(self):
         return self / self.abs()
@@ -328,6 +335,54 @@ class _Sphere(object):
         gl.glPopMatrix()
     def __repr__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
+
+class _Helix(object):
+    def __init__(self, pos1, pos2, radius, color, length, twists):
+        self.pos1 = pos1
+        self.pos2 = pos2
+        self.length = length
+        self.radius = radius
+        self.color = color
+        self.twists = twists
+    def _draw(self):
+        # use a fresh transformation matrix
+        gl.glPushMatrix()
+        gle.gleSetJoinStyle (gle.TUBE_NORM_EDGE | gle.TUBE_JN_ANGLE | gle.TUBE_JN_CAP)
+        # position object
+        pos1 = position(self.pos1)
+        pos2 = position(self.pos2)
+        gl.glTranslate(value(pos1.x), value(pos1.y), value(pos1.z))
+        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
+        check_units('radius must have dimensions of distance', self.radius, meter)
+        check_units('position must be a distance', pos1, pos2, meter)
+        dr = pos2 - pos1
+        dist = abs(dr)
+        if dist < self.length:
+            radius = sqrt(self.length**2 - dist**2)/self.twists/2/math.pi
+        else:
+            radius = 0.5*self.radius
+        dzdtheta = dist/self.twists
+        axis = dr.cross(vector(0,0,1))
+        mysin = abs(axis)/dist
+        mycos = dr.z/dist
+        angle = -atan2(mysin,mycos)*180/math.pi
+        gl.glRotate(angle, value(axis.x),value(axis.y),value(axis.z))
+        gle.gleHelicoid(value(self.radius), # rToroid
+                        value(radius), # startRadius
+                        0, # drdTheta
+                        0, # startz
+                        value(dist/self.twists), # dzdTheta
+                        None, # startXform
+                        None, # dXformdTheta
+                        0.0, # startTheta
+                        360.0*self.twists # sweepTheta
+        )
+        glut.glutSolidSphere(value(self.radius), 60, 60)
+        gl.glPopMatrix()
+    def __str__(self):
+        return 'helix(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
+    def __repr__(self):
+        return 'helix(%s, %s, %s)' % (self.pos1, self.pos2, self.radius)
 
 class __display(object):
     '''
@@ -456,6 +511,11 @@ class __display(object):
         self.__objects.append(s)
         self.init()
         return s
+    def create_helix(self, pos1, pos2, radius, color, length, twists):
+        h = _Helix(pos1, pos2, radius, color, length, twists)
+        self.__objects.append(h)
+        self.init()
+        return h
 
 __x = __display()
 
@@ -485,3 +545,33 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
     return __x.create_sphere(pos.copy(), radius, color.copy())
+
+def helix(pos1, pos2,
+          radius=0.1*meter, color=color.RGB(1,1,1),
+          length=None,
+          twists=10):
+    """Create a helix object.
+
+    Args:
+        pos1: the initial position of one end of the helix.  This may
+            be an object that has a position, in which case the helix
+            will be attached to that object as it moves.
+        pos2: the initial position of the other end of the helix.
+            This may be an object that has a position, in which case
+            the helix will be attached to that object as it moves.
+        radius: the radius of the wire in meters
+        color: the color of the helix
+        length: the length of the wire forming the helix.  If not
+            specified, this defaults to 2*twists*the distance between
+            the two ends.
+        twists: the number of twists in the wire
+
+    """
+    check_units('position must be a distance',
+                position(pos1), position(pos2), meter)
+    check_units('radius must have dimensions of distance', radius, meter)
+    if length == None:
+        length = 2*twists*abs(position(pos2) - position(pos1))
+    return __x.create_helix(pos1, pos2,
+                            radius, color.copy(), length=length,
+                            twists=twists)

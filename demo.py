@@ -13,6 +13,8 @@ s.pos.x = 1.1*meter
 
 s2.pos.x = -1.1*meter
 
+h = helix(s, s2)
+
 t = 0*second
 dt = 0.001*second
 omega = numpy.pi/second
