@@ -568,6 +568,7 @@ class __display(object):
         self.__am_slow = False
 
     def __onMouse(self, btn, state, x, y):
+        zoom_factor = 1.1
         if btn == glut.GLUT_LEFT_BUTTON:
             if state == glut.GLUT_DOWN:
                 self.__am_rotating = True
@@ -575,6 +576,18 @@ class __display(object):
                 self.__y_origin = y
             elif state == glut.GLUT_UP:
                 self.__am_rotating = False
+        elif btn == 3: # scroll up
+            if state == glut.GLUT_DOWN:
+                self.__camera = self.__center + (self.__camera - self.__center)/1.1
+            glut.glutPostRedisplay()
+        elif btn == 4: # scroll down
+            if state == glut.GLUT_DOWN:
+                self.__camera = self.__center + (self.__camera - self.__center)*1.1
+            glut.glutPostRedisplay()
+        else:
+            print('mouse', btn, state)
+    def __onWheel(self, button, direction, x, y):
+        print('scroll', button, direction, x, y)
     def __onMouseMotion(self, x, y):
         if self.__am_rotating:
             dx = x - self.__x_origin
@@ -593,6 +606,15 @@ class __display(object):
             self.__x_origin = x
             self.__y_origin = y
             glut.glutPostRedisplay()
+    def __onReshape(self, width, height):
+        self.__windowsize = (width, height)
+        gl.glViewport(0,0,width,height)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        glu.gluPerspective(40.,width/height,1.,1000.)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+        glut.glutPostRedisplay()
 
     def init(self):
         if not self.__is_initialized:
@@ -611,11 +633,10 @@ class __display(object):
             glut.glutDisplayFunc(self.__display)
             glut.glutMouseFunc(self.__onMouse)
             glut.glutMotionFunc(self.__onMouseMotion)
+            glut.glutMouseWheelFunc(self.__onWheel)
+            glut.glutReshapeFunc(self.__onReshape)
 
-            gl.glMatrixMode(gl.GL_PROJECTION)
-            glu.gluPerspective(40.,1.,1.,40.)
-            gl.glMatrixMode(gl.GL_MODELVIEW)
-            gl.glPushMatrix()
+            self.__onReshape(400,400)
             def sleep_forever():
                 self.__am_slow = False
                 if not self.__window_closed:
