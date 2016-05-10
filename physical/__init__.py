@@ -327,24 +327,30 @@ class vector(Units):
     def x(self):
         return scalar(self._x, self._mks)
     @x.setter
-    @units_match('x component must have dimensions of vector')
     def x(self,v):
+        if self._mks != units(v):
+            raise Exception('x component must have dimensions of vector: %s vs %s'
+                            % (self, v))
         self._x = value(v)
 
     @property
     def y(self):
         return scalar(self._y, self._mks)
     @y.setter
-    @units_match('y component must have dimensions of vector')
     def y(self,v):
+        if self._mks != units(v):
+            raise Exception('y component must have dimensions of vector: %s vs %s'
+                            % (self, v))
         self._y = value(v)
 
     @property
     def z(self):
         return scalar(self._z, self._mks)
     @z.setter
-    @units_match('z component must have dimensions of vector')
     def z(self,v):
+        if self._mks != units(v):
+            raise Exception('z component must have dimensions of vector: %s vs %s'
+                            % (self, v))
         self._z = value(v)
     def cross(self,b):
         if type(b) != vector:
