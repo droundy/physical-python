@@ -11,7 +11,7 @@ s2 = sphere()
 s.color = color.blue
 origin = sphere(radius=0.1*meter, color=color.red)
 
-b = box(vector(0, 0, -1*meter), 3*meter, 3*meter, 0.2*meter, color.blue)
+b = box(vector(0, 0, -1)*meter, 3*meter, 3*meter, 0.2*meter, color.blue)
 
 print(s.pos)
 s.pos.x = 1.1*meter

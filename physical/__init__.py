@@ -311,7 +311,9 @@ second = scalar(1, (0, 0, 1))
 
 class vector(Units):
     def __init__(self,x,y,z, mks=(0,0,0)):
-        check_units('vector components must have same dimensions', x,y,z)
+        ux = units(x)
+        if ux != units(y) or ux != units(z):
+            raise Exception('vector components must have same dimensions')
         self._mks = mks
         if mks == (0,0,0):
             if units(x) != mks:

@@ -1,11 +1,9 @@
 from __future__ import division, print_function
 
 import timeit
-from physical import *
-
 
 def timing(operation, setup, name):
-    N = 10000
+    N = 100000
     t = timeit.timeit(operation,
                       setup.format(module = 'physical'),
                       number=N)
