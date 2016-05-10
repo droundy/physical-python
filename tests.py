@@ -116,6 +116,22 @@ class TestUnits(unittest.TestCase):
         self.assertEqual(v.z, 3*meter)
         with self.assertRaises(Exception):
             v.z = 3
+    def test_dot(self):
+        a = vector(0,1,2)*meter
+        b = vector(2,1,0)*meter
+        self.assertEqual(a.dot(b),1*meter**2)
+        with self.assertRaises(Exception):
+            a.dot(5)
+        with self.assertRaises(Exception):
+            a.dot(5*meter)
+    def test_cross(self):
+        a = vector(0,1,2)*meter
+        b = vector(2,1,0)*meter
+        self.assertEqual(a.cross(b),vector(-2,4,-2)*meter**2)
+        with self.assertRaises(Exception):
+            a.cross(5)
+        with self.assertRaises(Exception):
+            a.cross(5*meter)
 
 if __name__ == '__main__':
     unittest.main()

@@ -120,6 +120,42 @@ def check_units(err, *vals):
                 raise Exception(err + ': %s vs %s' % (v, vals[0]))
     return True
 
+def check_units_pair(err, a, b):
+    """Verifies that the arguments have the same units.
+
+    Args:
+        err: a string giving the error message when units fail to match.
+    Raises:
+        Exception: the units do not match
+    """
+    # values of zero do not need units
+    def is_boring(v):
+        return ((not hasattr(v, '_mks') and v == 0)
+                or (type(v) == vector and v._mks == (0,0,0) and
+                    v._x == 0 and v._y == 0 and v._z == 0))
+    if is_boring(a) or is_boring(b):
+        return True
+    if units(a) != units(b):
+        raise Exception(err + ': %s vs %s' % (v, vals[0]))
+    return True
+
+def check_units_pair_vectors(err, a, b):
+    """Verifies that the arguments have the same units.
+
+    Args:
+        err: a string giving the error message when units fail to match.
+    Raises:
+        Exception: the units do not match
+    """
+    # values of zero do not need units
+    if type(b) != vector:
+        raise Exception('need vector')
+    if (a._mks == (0,0,0) and a._x == 0 and a._y == 0 and a._z == 0) or (b._mks == (0,0,0) and b._x == 0 and b._y == 0 and b._z == 0):
+        return True
+    if a._mks != b._mks:
+        raise Exception(err + ': %s vs %s' % (v, vals[0]))
+    return True
+
 def __is_not_boring(v):
     return not ((not hasattr(v, '_mks') and v == 0)
                 or (type(v) == vector and v._mks == (0,0,0) and
@@ -311,23 +347,36 @@ class vector(Units):
     def z(self,v):
         self._z = value(v)
     def cross(self,b):
-        return vector(self.y*b.z - self.z*b.y,
-                      self.z*b.x - self.x*b.z,
-                      self.x*b.y - self.y*b.x, Units._mul(self, b))
+        if type(b) != vector:
+            raise Exception('cannot take cross product of vector with %s' % type(b))
+        return vector(self._y*b._z - self._z*b._y,
+                      self._z*b._x - self._x*b._z,
+                      self._x*b._y - self._y*b._x, Units._mul(self, b))
     def dot(self,b):
-        return self.x*b.x + self.y*b.y + self.z*b.z
+        if type(b) != vector:
+            raise Exception('cannot take dot product of vector with %s' % type(b))
+        return scalar(self._x*b._x + self._y*b._y + self._z*b._z, Units._mul(self, b))
     def abs(self):
         return abs(self)
     def __abs__(self):
         return scalar(math.sqrt(self.x.v**2 + self.y.v**2 + self.z.v**2), self._mks)
     def normalized(self):
         return self / self.abs()
-    @units_match('can only add vectors with same dimension')
+
     def __add__(self, b):
+        if type(b) != vector:
+            raise Exception('cannot add vector to %s' % type(b))
+        if self._mks != b._mks:
+            raise Exception('dimensions do not match in vector addition: %s vs %s'
+                            % (self, b))
         return vector(self._x+b._x, self._y + b._y, self._z + b._z, self._mks)
-    @units_match('can only subtract vectors with same dimension')
     def __sub__(self, b):
-        return vector(self.x-b.x, self.y - b.y, self.z - b.z)
+        if type(b) != vector:
+            raise Exception('cannot subtract %s from vector' % type(b))
+        if self._mks != b._mks:
+            raise Exception('dimensions do not match in vector subtraction: %s vs %s'
+                            % (self, b))
+        return vector(self._x-b._x, self._y - b._y, self._z - b._z, self._mks)
     def __mul__(self, s):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
