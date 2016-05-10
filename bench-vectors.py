@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import timeit
 
 def timing(operation, setup, name):
-    N = 100000
+    N = 1000000
     t = timeit.timeit(operation,
                       setup.format(module = 'physical'),
                       number=N)
@@ -33,3 +33,15 @@ timing('a.x=a.dot(b)',
 timing('a=a.cross(b)',
        'from {module} import vector; a = vector(1,2,0); b = vector(0,0,0.001)',
        '{module}.vector cross method')
+
+timing('a=a*s',
+       'from {module} import vector; a = vector(1,2,0); s = 1.1',
+       '{module}.vector scalar product (reversed)')
+
+timing('a=s*a',
+       'from {module} import vector; a = vector(1,2,0); s = 1.1',
+       '{module}.vector scalar product')
+
+timing('a=a/s',
+       'from {module} import vector; a = vector(1,2,0); s = 1.1',
+       '{module}.vector scalar division')

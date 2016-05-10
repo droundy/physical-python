@@ -219,7 +219,7 @@ class scalar(Units):
     def __mul__(self, b):
         mks = Units._mul(self, b)
         if type(b) == vector:
-            return vector(b.x*self.v, b.y*self.v, b.z*self.v, mks)
+            return b*self
         else:
             return scalar(self.v*value(b), mks)
     def __rmul__(self, b):
@@ -310,6 +310,14 @@ kg = scalar(1, (0, 1, 0))
 second = scalar(1, (0, 0, 1))
 
 class vector(Units):
+    def __new(self,x,y,z,mks):
+        ''' A faster version of __init__ that does zero checking. '''
+        v = vector.__new__(vector)
+        v._mks = mks
+        v._x = x
+        v._y = y
+        v._z = z
+        return v
     def __init__(self,x,y,z, mks=(0,0,0)):
         ux = units(x)
         if ux != units(y) or ux != units(z):
@@ -357,9 +365,9 @@ class vector(Units):
     def cross(self,b):
         if type(b) != vector:
             raise Exception('cannot take cross product of vector with %s' % type(b))
-        return vector(self._y*b._z - self._z*b._y,
-                      self._z*b._x - self._x*b._z,
-                      self._x*b._y - self._y*b._x, Units._mul(self, b))
+        return self.__new(self._y*b._z - self._z*b._y,
+                          self._z*b._x - self._x*b._z,
+                          self._x*b._y - self._y*b._x, Units._mul(self, b))
     def dot(self,b):
         if type(b) != vector:
             raise Exception('cannot take dot product of vector with %s' % type(b))
@@ -377,36 +385,40 @@ class vector(Units):
         if self._mks != b._mks:
             raise Exception('dimensions do not match in vector addition: %s vs %s'
                             % (self, b))
-        return vector(self._x+b._x, self._y + b._y, self._z + b._z, self._mks)
+        return self.__new(self._x+b._x, self._y + b._y, self._z + b._z, self._mks)
     def __sub__(self, b):
         if type(b) != vector:
             raise Exception('cannot subtract %s from vector' % type(b))
         if self._mks != b._mks:
             raise Exception('dimensions do not match in vector subtraction: %s vs %s'
                             % (self, b))
-        return vector(self._x-b._x, self._y - b._y, self._z - b._z, self._mks)
+        return self.__new(self._x-b._x, self._y - b._y, self._z - b._z, self._mks)
     def __mul__(self, s):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
         mks = Units._mul(self, s)
-        return vector(self.x.v*value(s), self.y.v*value(s), self.z.v*value(s), mks)
+        s = value(s)
+        return self.__new(s*self._x, s*self._y, s*self._z, mks)
     def __rmul__(self, s):
         if not is_scalar(s):
             raise Exception('can only multipy vectors with scalars')
         mks = Units._mul(self, s)
-        return vector(self.x*value(s), self.y*value(s), self.z*value(s), mks)
+        s = value(s)
+        return self.__new(self._x*s, self._y*s, self._z*s, mks)
     def __div__(self,b):
         return self.__truediv__(b)
     def __truediv__(self, s):
         if not is_scalar(s):
             raise Exception('can only divide vectors by scalars')
-        return vector(self.x/s, self.y/s, self.z/s)
+        mks = Units._div(self, s)
+        s = value(s)
+        return self.__new(self._x/s, self._y/s, self._z/s, mks)
     def __eq__(self,b):
         return type(b) == vector and self._mks == b._mks and self._x == b._x and self._y == b._y and self._z == b._z
     def __repr__(self):
         return '<%s,%s,%s> %s' % (self._x, self._y, self._z, Units._repr(self))
     def copy(self):
-        return vector(self.x, self.y, self.z)
+        return self.__new(self._x, self._y, self._z, self._mks)
 
 class _rotation(object):
     def __init__(self,angle,axis):
