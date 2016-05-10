@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import timeit
 
 def timing(operation, setup, name):
-    N = 1000000
+    N = 100000
     t = timeit.timeit(operation,
                       setup.format(module = 'physical'),
                       number=N)
@@ -42,6 +42,14 @@ timing('a=s*a',
        'from {module} import vector; a = vector(1,2,0); s = 1.1',
        '{module}.vector scalar product')
 
-timing('a=a/s',
+timing('a=s*a',
        'from {module} import vector; a = vector(1,2,0); s = 1.1',
-       '{module}.vector scalar division')
+       '{module}.vector scalar product')
+
+timing('b = s**2',
+       '''try:
+    from {module} import meter
+    s = 5.5*meter
+except:
+    s = 5.5''',
+       '{module}.scalar pow')

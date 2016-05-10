@@ -14,8 +14,8 @@ __all__ = ('vector',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'sphere', 'helix', 'cylinder', 'box',
            'timestep', 'savepng',
-           'minimum_fps',
-           'meter', 'second', 'kg')
+           'minimum_fps', 'set_range', 'exit_visualization',
+           'meter', 'second', 'kg', 'Newton')
 
 try:
     import OpenGL.GLUT as glut
@@ -221,9 +221,14 @@ class scalar(Units):
         if type(b) == vector:
             return b*self
         else:
+            if mks == (0,0,0):
+                return self.v/value(b)
             return scalar(self.v*value(b), mks)
     def __rmul__(self, b):
-        return scalar(b*self.v, self._mks)
+        mks = Units._mul(self, b)
+        if mks == (0,0,0):
+            return self.v/value(b)
+        return scalar(self.v*value(b), mks)
     def __div__(self,b):
         return self.__truediv__(b)
     def __truediv__(self, b):
@@ -231,6 +236,8 @@ class scalar(Units):
         if type(b) == vector:
             raise Exception('cannot divide scalar by vector')
         else:
+            if mks == (0,0,0):
+                return self.v/value(b)
             return scalar(self.v/value(b), mks)
     def __rdiv__(self,b):
         return self.__rtruediv__(b)
@@ -304,10 +311,6 @@ def atan2(y,x):
 
     '''
     return numpy.arctan2(value(y),value(x))
-
-meter = scalar(1, (1, 0, 0))
-kg = scalar(1, (0, 1, 0))
-second = scalar(1, (0, 0, 1))
 
 class vector(Units):
     def __new(self,x,y,z,mks):
@@ -419,6 +422,11 @@ class vector(Units):
         return '<%s,%s,%s> %s' % (self._x, self._y, self._z, Units._repr(self))
     def copy(self):
         return self.__new(self._x, self._y, self._z, self._mks)
+
+meter = scalar(1, (1, 0, 0))
+kg = scalar(1, (0, 1, 0))
+second = scalar(1, (0, 0, 1))
+Newton = kg*meter/second**2
 
 class _rotation(object):
     def __init__(self,angle,axis):
@@ -624,10 +632,10 @@ class __display(object):
         self.__name = name
         self.__x_origin = 0
         self.__y_origin = 0
-        self.__center = vector(0,0,0)
-        self.__camera = vector(0,10,0)
+        self.__center = vector(0,0,0)*meter
+        self.__camera = vector(0,10,0)*meter
         self.__up = vector(0,0,1)
-        self.__window_closed = False
+        self._window_closed = False
         self.__objects = []
         self.__last_time = time.time()
         self.__start_time = time.time()
@@ -663,6 +671,10 @@ class __display(object):
             glut.glutPostRedisplay()
         else:
             print('mouse', btn, state)
+    def _set_range(self, x):
+        dr = self.__camera - self.__center
+        print(self.__camera, self.__center, x)
+        self.__camera = self.__center + x*dr/abs(dr)
     def __onWheel(self, button, direction, x, y):
         print('scroll', button, direction, x, y)
     def __onMouseMotion(self, x, y):
@@ -719,7 +731,7 @@ class __display(object):
             self.__onReshape(400,400)
             def sleep_forever():
                 self.__am_slow = False
-                if not self.__window_closed:
+                if not self._window_closed:
                     print('program complete, but still running visualization...')
                     while True:
                         glut.glutMainLoopEvent()
@@ -800,7 +812,7 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
 def helix(pos1, pos2,
           radius=0.1*meter, color=color.RGB(1,1,1),
           length=None,
-          twists=10):
+          twists=5):
     """Create a helix object.
 
     Args:
@@ -878,3 +890,12 @@ def savepng(fname):
 
 #: the minimum frames per second that the renderer will draw.
 minimum_fps = 0.1/second
+
+def set_range(d):
+    '''Set the distance from the camera to the center of view.
+    '''
+    check_units('range must be a distance', d, meter)
+    __x._set_range(d)
+
+def exit_visualization():
+    __x._window_closed = True
