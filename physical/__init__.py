@@ -553,7 +553,6 @@ class __display(object):
 
     def __init__(self, name = b'physical python'):
         self.__name = name
-        self.__am_rotating = False
         self.__x_origin = 0
         self.__y_origin = 0
         self.__center = vector(0,0,0)
@@ -565,6 +564,8 @@ class __display(object):
         self.__start_time = time.time()
         self.__current_time = time.time()
         self.__is_initialized = False
+        self.__am_rotating = False
+        self.__am_translating = False
         self.__am_slow = False
 
     def __onMouse(self, btn, state, x, y):
@@ -576,6 +577,13 @@ class __display(object):
                 self.__y_origin = y
             elif state == glut.GLUT_UP:
                 self.__am_rotating = False
+        elif btn == glut.GLUT_RIGHT_BUTTON:
+            if state == glut.GLUT_DOWN:
+                self.__am_translating = True
+                self.__x_origin = x
+                self.__y_origin = y
+            elif state == glut.GLUT_UP:
+                self.__am_translating = False
         elif btn == 3: # scroll up
             if state == glut.GLUT_DOWN:
                 self.__camera = self.__center + (self.__camera - self.__center)/1.1
@@ -589,22 +597,25 @@ class __display(object):
     def __onWheel(self, button, direction, x, y):
         print('scroll', button, direction, x, y)
     def __onMouseMotion(self, x, y):
+        dx = x - self.__x_origin
+        dy = y - self.__y_origin
+        self.__x_origin = x
+        self.__y_origin = y
+        if dx == 0 and dy == 0:
+            return
+        yhat = self.__up.normalized()
+        xhat = self.__up.cross((self.__center - self.__camera).normalized())
         if self.__am_rotating:
-            dx = x - self.__x_origin
-            dy = y - self.__y_origin
-            if dx == 0 and dy == 0:
-                return
-            yhat = self.__up.normalized()
-            xhat = self.__up.cross((self.__center - self.__camera).normalized())
             direction = (dy*xhat - dx*yhat).normalized()
-            angle = 5*math.sqrt((dx**2 + dy**2)
-                                /
-                                (self.__windowsize[0]**2 + self.__windowsize[1]**2))
+            angle = 3*math.sqrt(dx**2 + dy**2)/self.__windowsize[1]
             R = _rotation(angle, direction)
             self.__camera = R.rotate(self.__camera)
             self.__up = R.rotate(self.__up)
-            self.__x_origin = x
-            self.__y_origin = y
+            glut.glutPostRedisplay()
+        elif self.__am_translating:
+            move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(self.__camera - self.__center)
+            self.__camera = self.__camera + move
+            self.__center = self.__center + move
             glut.glutPostRedisplay()
     def __onReshape(self, width, height):
         self.__windowsize = (width, height)
