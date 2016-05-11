@@ -13,6 +13,7 @@ __all__ = ('vector',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'sphere', 'helix', 'cylinder', 'box',
+           'plot',
            'timestep', 'savepng',
            'minimum_fps', 'set_range', 'exit_visualization',
            'meter', 'second', 'kg', 'Newton')
@@ -443,6 +444,60 @@ class _rotation(object):
         sinalpha = math.sin(self.angle)
         return vperp*cosalpha + self.axis.cross(v)*sinalpha + vpar
 
+class _Plot(object):
+    def __init__(self, color):
+        self._x = []
+        self._y = []
+        self.__ymax = -1e40
+        self.__xmax = -1e40
+        self.__ymin = 1e40
+        self.__xmin = 1e40
+        self.color = color
+    def __str__(self):
+        return 'plot(%s)' % (self.color)
+    def __repr__(self):
+        return 'color(%s)' % (self.color)
+    def _ymax(self):
+        return self.__ymax
+    def _xmax(self):
+        return self.__xmax
+    def _ymin(self):
+        return self.__ymin
+    def _xmin(self):
+        return self.__xmin
+    def plot(self,x,y):
+        self._x.append(x)
+        self._y.append(y)
+        if len(self._x) > 1:
+            self.__xmax = max(x, self.__xmax)
+            self.__xmin = min(x, self.__xmin)
+            self.__ymax = max(y, self.__ymax)
+            self.__ymin = min(y, self.__ymin)
+        else:
+            self.__xmax = x
+            self.__xmin = x
+            self.__ymax = y
+            self.__ymin = y
+    def _draw(self, xmin, xmax, ymin, ymax):
+        if len(self._y) < 2:
+            return
+        gl.glColor3f(*self.color.rgb())
+        gl.glLineWidth(1.3)
+        gl.glBegin(gl.GL_LINES)
+        xs = self._x
+        ys = self._y
+        skip = int(len(xs)/400)+1
+        def x(i):
+            v = xs[i]
+            return 2*(v - xmin)/(xmax-xmin) - 1
+        def y(i):
+            v = ys[i]
+            return 2*(v - ymin)/(ymax-ymin) - 1
+        for i in range(0,len(ys)-skip,skip):
+            gl.glVertex2f(x(i), y(i));
+            gl.glVertex2f(x(i+skip), y(i+skip));
+        gl.glEnd()
+
 class _Sphere(object):
     def __init__(self, pos, radius, color):
         check_units('position must have dimensions of distance', pos, meter)
@@ -587,6 +642,60 @@ class __display(object):
     it is only intended for name-spacing.
     '''
     def __drawstuff(self):
+        # we are sloppy and reset the viewport to window size each
+        # time, and reset the perspective each time as well.
+        gl.glViewport(0,0,self.__windowsize[0],self.__windowsize[1])
+        if self.__am_slow:
+            gl.glClearColor(0.2,0.,0.,1.)
+        else:
+            gl.glClearColor(0.,0.,0.,1.)
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
+
+
+        # Now let us do the 2D underlay.  We begin by saving the
+        # existing projection matrix.
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+
+        # This sets up an orthographic projection, appropriate for 2D
+        # material.
+        #gl.glOrtho(0,self.__windowsize[0], self.__windowsize[1], 0,-1,1)
+
+        # set up a temporary and blank model matrix
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glPushMatrix()
+        gl.glLoadIdentity()
+
+        # set visualization parameters for 2D
+        gl.glPushAttrib( gl.GL_DEPTH_BUFFER_BIT | gl.GL_LIGHTING_BIT )
+        gl.glDisable( gl.GL_DEPTH_TEST )
+        gl.glDisable( gl.GL_LIGHTING )
+        # put 2D stuff in here...
+
+        # I am not sure why setting the clear color here makes any difference...
+        gl.glClearColor(0.,0.,0.,1.)
+        if len(self.__plots) > 0:
+            ymax = max(map(lambda p: p._ymax(), self.__plots))
+            ymin = min(map(lambda p: p._ymin(), self.__plots))
+            xmax = max(map(lambda p: p._xmax(), self.__plots))
+            xmin = min(map(lambda p: p._xmin(), self.__plots))
+            for p in self.__plots:
+                p._draw(xmin, xmax, ymin, ymax)
+
+        # Done with 2D drawing, so now we restore our previous
+        # model view and projection matrix.
+        gl.glPopAttrib()
+        gl.glPopMatrix()
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glPopMatrix()
+
+
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        glu.gluPerspective(40.,self.__windowsize[0]/self.__windowsize[1],1.,1000.)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
         gl.glPushMatrix()
         glu.gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
                   value(self.__center.x), value(self.__center.y), value(self.__center.z),
@@ -607,12 +716,6 @@ class __display(object):
         gl.glLightf(gl.GL_LIGHT1, gl.GL_CONSTANT_ATTENUATION, 0.1)
         gl.glLightf(gl.GL_LIGHT1, gl.GL_LINEAR_ATTENUATION, 0.05)
         gl.glEnable(gl.GL_LIGHT1)
-
-        if self.__am_slow:
-            gl.glClearColor(0.2,0.,0.,1.)
-        else:
-            gl.glClearColor(0.,0.,0.,1.)
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
 
         for o in self.__objects:
             o._draw()
@@ -641,6 +744,7 @@ class __display(object):
         self.__up = vector(0,0,1)
         self._window_closed = False
         self.__objects = []
+        self.__plots = []
         self.__last_time = time.time()
         self.__start_time = time.time()
         self.__current_time = time.time()
@@ -704,12 +808,6 @@ class __display(object):
             glut.glutPostRedisplay()
     def __onReshape(self, width, height):
         self.__windowsize = (width, height)
-        gl.glViewport(0,0,width,height)
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glLoadIdentity()
-        glu.gluPerspective(40.,width/height,1.,1000.)
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glLoadIdentity()
         glut.glutPostRedisplay()
 
     def init(self):
@@ -758,6 +856,13 @@ class __display(object):
         else:
             pass
         glut.glutMainLoopEvent()
+    def create_plot(self, c):
+        if type(c) != color.RGB:
+            raise Exception('plot must be given a color')
+        s = _Plot(c)
+        self.__plots.append(s)
+        self.init()
+        return s
     def create_sphere(self, pos, radius, color):
         s = _Sphere(pos, radius, color)
         self.__objects.append(s)
@@ -888,6 +993,16 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     check_units('box dimensions must be distances',
                 pos, wx, wy, wz, meter)
     return __x.create_box(pos, wx, wy, wz, color.copy())
+
+def plot(color):
+    """Create a plot.
+
+    Args:
+        color: the color of the curve
+    Raises:
+        Exception: the color is not a color
+    """
+    return __x.create_plot(color)
 
 def savepng(fname):
     __x._save(fname)
