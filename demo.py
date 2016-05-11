@@ -26,6 +26,7 @@ h = helix(s, s2)
 savepng('/tmp/demo.png')
 
 xplot = plot(color.white)
+hline(0*meter, color.RGB(0.3,0.3,0.3))
 
 t = 0*second
 dt = 0.001*second

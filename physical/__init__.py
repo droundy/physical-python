@@ -13,7 +13,7 @@ __all__ = ('vector',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'sphere', 'helix', 'cylinder', 'box',
-           'plot',
+           'plot', 'hline',
            'timestep', 'savepng',
            'minimum_fps', 'set_range', 'exit_visualization',
            'meter', 'second', 'kg', 'Newton')
@@ -152,7 +152,8 @@ def check_units_pair_vectors(err, a, b):
     return True
 
 def __is_not_boring(v):
-    return not ((not hasattr(v, '_mks') and v == 0)
+    return not (v != v
+                or (not hasattr(v, '_mks') and v == 0)
                 or (type(v) == vector and v._mks == (0,0,0) and
                     v.x == 0 and v.y == 0 and v.z == 0)
                 or type(v) == type(None))
@@ -187,7 +188,6 @@ def dimensionless(err):
         return is_dimensionless
     return decorator
 
-@functools.total_ordering
 class scalar(Units):
     '''A scalar value with units attached.
     '''
@@ -248,6 +248,15 @@ class scalar(Units):
     @units_match('can only compare values with same dimensions')
     def __lt__(self, b):
         return self.v < value(b)
+    @units_match('can only compare values with same dimensions')
+    def __gt__(self, b):
+        return self.v > value(b)
+    @units_match('can only compare values with same dimensions')
+    def __ge__(self, b):
+        return self.v >= value(b)
+    @units_match('can only compare values with same dimensions')
+    def __le__(self, b):
+        return self.v <= value(b)
     def __repr__(self):
         return '%s %s' % (self.v, Units._repr(self))
 
@@ -445,14 +454,15 @@ class _rotation(object):
         return vperp*cosalpha + self.axis.cross(v)*sinalpha + vpar
 
 class _Plot(object):
-    def __init__(self, color):
+    def __init__(self, color, display):
         self._x = []
         self._y = []
-        self.__ymax = -1e40
-        self.__xmax = -1e40
-        self.__ymin = 1e40
-        self.__xmin = 1e40
+        self.__ymax = None
+        self.__xmax = None
+        self.__ymin = None
+        self.__xmin = None
         self.color = color
+        self.__display = display
     def __str__(self):
         return 'plot(%s)' % (self.color)
     def __repr__(self):
@@ -466,18 +476,28 @@ class _Plot(object):
     def _xmin(self):
         return self.__xmin
     def plot(self,x,y):
-        self._x.append(x)
-        self._y.append(y)
         if len(self._x) > 1:
+            check_units('y coordinates must all have same units',
+                        y, self._y[0])
+            check_units('x coordinates must all have same units',
+                        x, self._x[0])
             self.__xmax = max(x, self.__xmax)
             self.__xmin = min(x, self.__xmin)
             self.__ymax = max(y, self.__ymax)
             self.__ymin = min(y, self.__ymin)
         else:
+            yu = self.__display._y_units()
+            if yu is not None:
+                check_units('y coordinates must all have same units', y, yu)
+            xu = self.__display._x_units()
+            if xu is not None:
+                check_units('x coordinates must all have same units', x, xu)
             self.__xmax = x
             self.__xmin = x
             self.__ymax = y
             self.__ymin = y
+        self._x.append(x)
+        self._y.append(y)
     def _draw(self, xmin, xmax, ymin, ymax):
         if len(self._y) < 2:
             return
@@ -486,7 +506,7 @@ class _Plot(object):
         gl.glBegin(gl.GL_LINES)
         xs = self._x
         ys = self._y
-        skip = int(len(xs)/400)+1
+        skip = int(len(xs)/800)+1
         def x(i):
             v = xs[i]
             return 2*(v - xmin)/(xmax-xmin) - 1
@@ -496,6 +516,40 @@ class _Plot(object):
         for i in range(0,len(ys)-skip,skip):
             gl.glVertex2f(x(i), y(i));
             gl.glVertex2f(x(i+skip), y(i+skip));
+        gl.glEnd()
+
+class _Hline(object):
+    def __init__(self, value, color, display):
+        self._y = value
+        self.color = color
+        self.__display = display
+    def __str__(self):
+        return 'hline(%s, %s)' % (self._y, self.color)
+    def __repr__(self):
+        return self.__str__()
+    def _ymax(self):
+        return self._y
+    def _xmax(self):
+        return None
+    def _ymin(self):
+        return self._y
+    def _xmin(self):
+        return None
+    def plot(self,y):
+        yu = self.__display._y_units()
+        if yu is not None:
+            check_units('y coordinates must all have same units', y, yu)
+        self._y = y
+    def _draw(self, xmin, xmax, ymin, ymax):
+        gl.glColor3f(*self.color.rgb())
+        gl.glLineWidth(1.3)
+        if ymax == ymin:
+            y_on_screen = 0
+        else:
+            y_on_screen = 2*(self._y - ymin)/(ymax-ymin) - 1
+        gl.glBegin(gl.GL_LINES)
+        gl.glVertex2f(-1, y_on_screen);
+        gl.glVertex2f( 1, y_on_screen);
         gl.glEnd()
 
 class _Sphere(object):
@@ -641,6 +695,16 @@ class __display(object):
     this could allow us to support multiple windows, but in practice
     it is only intended for name-spacing.
     '''
+    def _y_units(self):
+        ys = filter(lambda x: x is not None, map(lambda p: p._ymax(), self.__plots))
+        if len(ys) == 0:
+            return None
+        return ys[0]
+    def _x_units(self):
+        xs = filter(lambda x: x is not None, map(lambda p: p._xmax(), self.__plots))
+        if len(xs) == 0:
+            return None
+        return xs[0]
     def __drawstuff(self):
         # we are sloppy and reset the viewport to window size each
         # time, and reset the perspective each time as well.
@@ -651,44 +715,52 @@ class __display(object):
             gl.glClearColor(0.,0.,0.,1.)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
 
-
-        # Now let us do the 2D underlay.  We begin by saving the
-        # existing projection matrix.
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        # This sets up an orthographic projection, appropriate for 2D
-        # material.
-        #gl.glOrtho(0,self.__windowsize[0], self.__windowsize[1], 0,-1,1)
-
-        # set up a temporary and blank model matrix
-        gl.glMatrixMode(gl.GL_MODELVIEW)
-        gl.glPushMatrix()
-        gl.glLoadIdentity()
-
-        # set visualization parameters for 2D
-        gl.glPushAttrib( gl.GL_DEPTH_BUFFER_BIT | gl.GL_LIGHTING_BIT )
-        gl.glDisable( gl.GL_DEPTH_TEST )
-        gl.glDisable( gl.GL_LIGHTING )
-        # put 2D stuff in here...
-
-        # I am not sure why setting the clear color here makes any difference...
-        gl.glClearColor(0.,0.,0.,1.)
         if len(self.__plots) > 0:
-            ymax = max(map(lambda p: p._ymax(), self.__plots))
-            ymin = min(map(lambda p: p._ymin(), self.__plots))
-            xmax = max(map(lambda p: p._xmax(), self.__plots))
-            xmin = min(map(lambda p: p._xmin(), self.__plots))
+            try:
+                ymax = max(filter(lambda x: x is not None, map(lambda p: p._ymax(), self.__plots)))
+                ymin = min(filter(lambda x: x is not None, map(lambda p: p._ymin(), self.__plots)))
+            except:
+                ymax = 1
+                ymin = -1
+            try:
+                xmax = max(filter(lambda x: x is not None, map(lambda p: p._xmax(), self.__plots)))
+                xmin = min(filter(lambda x: x is not None, map(lambda p: p._xmin(), self.__plots)))
+            except:
+                xmax = 1
+                xmin = -1
+            # Now let us do the 2D underlay.  We begin by saving the
+            # existing projection matrix.
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glPushMatrix()
+            gl.glLoadIdentity()
+
+            # This sets up an orthographic projection, appropriate for 2D
+            # material.
+            #gl.glOrtho(0,self.__windowsize[0], self.__windowsize[1], 0,-1,1)
+
+            # set up a temporary and blank model matrix
+            gl.glMatrixMode(gl.GL_MODELVIEW)
+            gl.glPushMatrix()
+            gl.glLoadIdentity()
+
+            # set visualization parameters for 2D
+            gl.glPushAttrib( gl.GL_DEPTH_BUFFER_BIT | gl.GL_LIGHTING_BIT )
+            gl.glDisable( gl.GL_DEPTH_TEST )
+            gl.glDisable( gl.GL_LIGHTING )
+            # put 2D stuff in here...
+
+            # I am not sure why setting the clear color here makes any difference...
+            gl.glClearColor(0.,0.,0.,1.)
+
             for p in self.__plots:
                 p._draw(xmin, xmax, ymin, ymax)
 
-        # Done with 2D drawing, so now we restore our previous
-        # model view and projection matrix.
-        gl.glPopAttrib()
-        gl.glPopMatrix()
-        gl.glMatrixMode(gl.GL_PROJECTION)
-        gl.glPopMatrix()
+            # Done with 2D drawing, so now we restore our previous
+            # model view and projection matrix.
+            gl.glPopAttrib()
+            gl.glPopMatrix()
+            gl.glMatrixMode(gl.GL_PROJECTION)
+            gl.glPopMatrix()
 
 
         gl.glMatrixMode(gl.GL_PROJECTION)
@@ -859,7 +931,14 @@ class __display(object):
     def create_plot(self, c):
         if type(c) != color.RGB:
             raise Exception('plot must be given a color')
-        s = _Plot(c)
+        s = _Plot(c, self)
+        self.__plots.append(s)
+        self.init()
+        return s
+    def create_hline(self, y, c):
+        if type(c) != color.RGB:
+            raise Exception('plot must be given a color')
+        s = _Hline(y, c, self)
         self.__plots.append(s)
         self.init()
         return s
@@ -995,7 +1074,7 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     return __x.create_box(pos, wx, wy, wz, color.copy())
 
 def plot(color):
-    """Create a plot.
+    """Create a plot object.
 
     Args:
         color: the color of the curve
@@ -1003,6 +1082,20 @@ def plot(color):
         Exception: the color is not a color
     """
     return __x.create_plot(color)
+
+def hline(value, color):
+    """Create a horizontal line object.
+
+    Args:
+        value: the y value of the line
+        color: the color of the line
+    Raises:
+        Exception: the color is not a color
+    """
+    yu = __x._y_units()
+    if yu is not None:
+        check_units('y coordinates must all have same units', y, yu)
+    return __x.create_hline(value, color)
 
 def savepng(fname):
     __x._save(fname)
