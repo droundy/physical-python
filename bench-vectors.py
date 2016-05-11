@@ -3,7 +3,7 @@ from __future__ import division, print_function
 import timeit
 
 def timing(operation, setup, name):
-    N = 100000
+    N = 1000000
     t = timeit.timeit(operation,
                       setup.format(module = 'physical'),
                       number=N)
@@ -36,15 +36,15 @@ timing('a=a.cross(b)',
 
 timing('a=a*s',
        'from {module} import vector; a = vector(1,2,0); s = 1.1',
-       '{module}.vector scalar product (reversed)')
+       '{module}.vector scalar multiplication (reversed)')
+
+timing('a=a/s',
+       'from {module} import vector; a = vector(1,2,0); s = 1.1',
+       '{module}.vector scalar division')
 
 timing('a=s*a',
        'from {module} import vector; a = vector(1,2,0); s = 1.1',
-       '{module}.vector scalar product')
-
-timing('a=s*a',
-       'from {module} import vector; a = vector(1,2,0); s = 1.1',
-       '{module}.vector scalar product')
+       '{module}.vector scalar multiplication')
 
 timing('b = s**2',
        '''try:
@@ -53,3 +53,44 @@ timing('b = s**2',
 except:
     s = 5.5''',
        '{module}.scalar pow')
+
+timing('c = a*b',
+       '''try:
+    from {module} import meter
+    a = 5.5*meter
+    b = -.5*meter
+except:
+    a = 5.5
+    b = -.5''',
+       '{module}.scalar mul')
+
+timing('c = a*b',
+       '''try:
+    from {module} import meter
+    a = 5.5*meter
+    b = -.5
+except:
+    a = 5.5
+    b = -.5''',
+       '{module}.scalar mul float')
+
+timing('c = b*a',
+       '''try:
+    from {module} import meter
+    a = 5.5*meter
+    b = -.5
+except:
+    a = 5.5
+    b = -.5''',
+       '{module}.scalar float mul')
+
+timing('c = a/b',
+       '''try:
+    from {module} import meter
+    a = 5.5*meter
+    b = -.5*meter
+except:
+    a = 5.5
+    b = -.5''',
+       '{module}.scalar div')
+

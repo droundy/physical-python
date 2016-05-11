@@ -88,17 +88,11 @@ class Units(object):
         return '*'.join(r)
 
 def units(v):
-    if hasattr(v, '_mks'):
-        return v._mks
-    return (0,0,0)
+    return getattr(v, '_mks', (0,0,0))
 def value(v):
-    if hasattr(v, 'v'):
-        return v.v
-    return v
+    return getattr(v, 'v', v)
 def position(v):
-    if hasattr(v, 'pos'):
-        return v.pos
-    return v
+    return getattr(v, 'pos', v)
 def check_units(err, *vals):
     """Verifies that the arguments have the same units.
 
@@ -217,18 +211,21 @@ class scalar(Units):
         mks = Units._pow(self, b)
         return scalar(self.v **value(b), mks)
     def __mul__(self, b):
-        mks = Units._mul(self, b)
+        smks = self._mks; bmks = getattr(b, '_mks', (0,0,0))
+        mks = (smks[0]+bmks[0], smks[1]+bmks[1], smks[2]+bmks[2])
         if type(b) == vector:
             return b*self
         else:
             if mks == (0,0,0):
-                return self.v/value(b)
-            return scalar(self.v*value(b), mks)
+                return self.v*getattr(b,'v',b)
+            return scalar(self.v*getattr(b,'v',b), mks)
     def __rmul__(self, b):
-        mks = Units._mul(self, b)
-        if mks == (0,0,0):
-            return self.v/value(b)
-        return scalar(self.v*value(b), mks)
+        '''We assume here than any object with units (or that is a vector)
+        will implement __mul__, so __rmul__ will only be invoked with
+        a scalar type as input.
+
+        '''
+        return scalar(self.v*b, self._mks)
     def __div__(self,b):
         return self.__truediv__(b)
     def __truediv__(self, b):
@@ -368,13 +365,17 @@ class vector(Units):
     def cross(self,b):
         if type(b) != vector:
             raise Exception('cannot take cross product of vector with %s' % type(b))
-        return self.__new(self._y*b._z - self._z*b._y,
-                          self._z*b._x - self._x*b._z,
-                          self._x*b._y - self._y*b._x, Units._mul(self, b))
+        sx = self._x; sy = self._y; sz = self._z
+        bx = b._x; by = b._y; bz = b._z
+        smks = self._mks; bmks = b._mks
+        return self.__new(sy*bz - sz*by, sz*bx - sx*bz, sx*by - sy*bx,
+                          (smks[0]+bmks[0], smks[1]+bmks[1], smks[2]+bmks[2]))
     def dot(self,b):
         if type(b) != vector:
             raise Exception('cannot take dot product of vector with %s' % type(b))
-        return scalar(self._x*b._x + self._y*b._y + self._z*b._z, Units._mul(self, b))
+        smks = self._mks; bmks = b._mks
+        return scalar(self._x*b._x + self._y*b._y + self._z*b._z,
+                      (smks[0]+bmks[0], smks[1]+bmks[1], smks[2]+bmks[2]))
     def abs(self):
         return abs(self)
     def __abs__(self):
@@ -396,25 +397,28 @@ class vector(Units):
             raise Exception('dimensions do not match in vector subtraction: %s vs %s'
                             % (self, b))
         return self.__new(self._x-b._x, self._y - b._y, self._z - b._z, self._mks)
-    def __mul__(self, s):
-        if not is_scalar(s):
+    def __mul__(self, b):
+        if not is_scalar(b):
             raise Exception('can only multipy vectors with scalars')
-        mks = Units._mul(self, s)
-        s = value(s)
+        smks = self._mks; bmks = getattr(b, '_mks', (0,0,0))
+        mks = (smks[0]+bmks[0], smks[1]+bmks[1], smks[2]+bmks[2])
+        s = getattr(b,'v',b)
         return self.__new(s*self._x, s*self._y, s*self._z, mks)
     def __rmul__(self, s):
-        if not is_scalar(s):
-            raise Exception('can only multipy vectors with scalars')
-        mks = Units._mul(self, s)
-        s = value(s)
-        return self.__new(self._x*s, self._y*s, self._z*s, mks)
+        '''We assume here than any object with units (or that is a vector)
+        will implement __mul__, so __rmul__ will only be invoked with
+        a scalar type as input.
+
+        '''
+        return self.__new(self._x*s, self._y*s, self._z*s, self._mks)
     def __div__(self,b):
         return self.__truediv__(b)
-    def __truediv__(self, s):
-        if not is_scalar(s):
+    def __truediv__(self, b):
+        if not is_scalar(b):
             raise Exception('can only divide vectors by scalars')
-        mks = Units._div(self, s)
-        s = value(s)
+        smks = self._mks; bmks = getattr(b, '_mks', (0,0,0))
+        mks = (smks[0]-bmks[0], smks[1]-bmks[1], smks[2]-bmks[2])
+        s = getattr(b,'v',b)
         return self.__new(self._x/s, self._y/s, self._z/s, mks)
     def __eq__(self,b):
         return type(b) == vector and self._mks == b._mks and self._x == b._x and self._y == b._y and self._z == b._z

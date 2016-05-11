@@ -89,6 +89,10 @@ class TestUnits(unittest.TestCase):
         self.assertEqual(v,vv)
         self.assertEqual(v*a, vector(2,4,6)*second*meter)
         self.assertEqual(a*v, vector(2,4,6)*second*meter)
+        self.assertEqual(a*5, 10*meter)
+        self.assertEqual(5*a, 10*meter)
+        self.assertEqual(v*5, vector(5,10,15)*second)
+        self.assertEqual(5*v, vector(5,10,15)*second)
         with self.assertRaises(Exception):
             v*v
         self.assertEqual(v.x, 1*second)
