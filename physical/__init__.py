@@ -1049,6 +1049,23 @@ def cylinder(pos1, pos2,
         color: the color of the cylinder
     Raises:
         Exception: the dimensions are not distances
+
+    The properties of the cylinder may be accessed and later modified
+    as member variables of the object returned.
+
+    .. testsetup::
+
+        from physical import *
+
+    .. testcode ::
+
+        c = cylinder(vector(0,0,0)*meter, vector(1,0,0)*meter)
+        c.pos2 = vector(2,0,0)*meter
+
+    .. testcleanup::
+
+        exit_visualization()
+
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -1083,7 +1100,7 @@ def plot(color):
         Exception: the color is not a color
 
     This function returns a plot object.  You can add values to the
-    plot using code such as:
+    plot as :math:`xy` pairs using code such as:
 
     .. testsetup::
 
