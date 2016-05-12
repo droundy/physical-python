@@ -152,8 +152,7 @@ def check_units_pair_vectors(err, a, b):
     return True
 
 def __is_not_boring(v):
-    return not (v != v
-                or (not hasattr(v, '_mks') and v == 0)
+    return not ((not hasattr(v, '_mks') and v == 0)
                 or (type(v) == vector and v._mks == (0,0,0) and
                     v.x == 0 and v.y == 0 and v.z == 0)
                 or type(v) == type(None))
@@ -509,9 +508,13 @@ class _Plot(object):
         skip = int(len(xs)/800)+1
         def x(i):
             v = xs[i]
+            if xmax == xmin:
+                return 0
             return 2*(v - xmin)/(xmax-xmin) - 1
         def y(i):
             v = ys[i]
+            if ymax == ymin:
+                return 0
             return 2*(v - ymin)/(ymax-ymin) - 1
         for i in range(0,len(ys)-skip,skip):
             gl.glVertex2f(x(i), y(i));
@@ -696,15 +699,13 @@ class __display(object):
     it is only intended for name-spacing.
     '''
     def _y_units(self):
-        ys = filter(lambda x: x is not None, map(lambda p: p._ymax(), self.__plots))
-        if len(ys) == 0:
-            return None
-        return ys[0]
+        for y in filter(lambda x: x is not None, map(lambda p: p._ymax(), self.__plots)):
+            return y
+        return None
     def _x_units(self):
-        xs = filter(lambda x: x is not None, map(lambda p: p._xmax(), self.__plots))
-        if len(xs) == 0:
-            return None
-        return xs[0]
+        for x in filter(lambda x: x is not None, map(lambda p: p._xmax(), self.__plots)):
+            return x
+        return None
     def __drawstuff(self):
         # we are sloppy and reset the viewport to window size each
         # time, and reset the perspective each time as well.
@@ -1080,6 +1081,30 @@ def plot(color):
         color: the color of the curve
     Raises:
         Exception: the color is not a color
+
+    This function returns a plot object.  You can add values to the
+    plot using code such as:
+
+    .. testsetup::
+
+        from physical import *
+        t=0*second
+        dt = 0.01*second
+        mass=1*kg
+        v=1*meter/second
+
+    .. testcode ::
+
+        kinetic_energy = plot(color.red)
+        while t < 5*second:
+            kinetic_energy.plot(t, 0.5*mass*v**2)
+            t += dt
+            timestep(dt)
+
+    .. testcleanup::
+
+        exit_visualization()
+
     """
     return __x.create_plot(color)
 

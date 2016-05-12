@@ -8,6 +8,11 @@ c .pyc
 c ~
 c .tum
 
+? sphinx-build -W -b doctest -d _build/doctrees   . _build/doctest
+c .pyc
+c ~
+c .tum
+
 | python3 tests.py
 c .pyc
 
