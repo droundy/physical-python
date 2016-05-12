@@ -4,6 +4,18 @@ them program using 3d simulation. A key goal is to provide clear error
 messages for mistakes common among intro physics students. Physical is
 inspired by the visual package, but aims to provide improved error
 messages and assignment semantics.
+
+.. testsetup:: *
+
+    from physical import *
+
+
+.. testcleanup:: *
+
+    exit_visualization()
+
+
+
 """
 
 from __future__ import division, print_function
@@ -12,11 +24,13 @@ __all__ = ('vector',
            'color',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
+           'pi',
            'sphere', 'helix', 'cylinder', 'box',
            'plot', 'hline',
            'timestep', 'savepng',
-           'minimum_fps', 'set_range', 'exit_visualization',
-           'meter', 'second', 'kg', 'Newton')
+           'minimum_fps', 'exit_visualization',
+           'camera_range', 'camera_center',
+           'meter', 'second', 'kg', 'Newton', 'Joule')
 
 try:
     import OpenGL.GLUT as glut
@@ -171,11 +185,26 @@ def units_match(err):
     return decorator
 
 def dimensionless(err):
-    '''
+    r'''
     A decorator for declaring that a function expects dimensionless
-    input. This is used in functions like 'sin' and 'cos'.  The single
+    input, such as :math:`\sin` and :math:`\cos`.  The single
     argument is the error message to be presented to a user who
     accidentally provides this function with a value having units.
+
+    .. testcode :: dimensionless
+
+        @dimensionless('arguments to myfunction should be dimensionless')
+        def myfunction(x):
+            return 4*x
+
+    .. doctest :: dimensionless
+
+        >>> myfunction(4)
+        16
+        >>> myfunction(4*meter)
+        Traceback (most recent call last):
+          ...
+        Exception: arguments to myfunction should be dimensionless: 4 meter
     '''
     def decorator(func):
         @functools.wraps(func)
@@ -260,7 +289,13 @@ class scalar(Units):
         return '%s %s' % (self.v, Units._repr(self))
 
 def sqrt(v):
-    r'''Compute :math:`\sqrt{x}`.'''
+    r'''Compute :math:`\sqrt{x}`.
+
+    .. doctest :: math
+
+        >>> sqrt(4*second**2)
+        2.0 second
+'''
     return v**0.5
 
 @dimensionless('argument to exp must be dimensionless')
@@ -269,6 +304,15 @@ def exp(x):
 
     Raises:
         Exception: x is not dimensionless
+
+    .. doctest :: math
+
+        >>> exp(0)
+        1.0
+        >>> exp(2*second) # bad units!
+        Traceback (most recent call last):
+          ...
+        Exception: argument to exp must be dimensionless: 2 second
     '''
     return numpy.exp(value(x))
 
@@ -278,6 +322,15 @@ def sin(x):
 
     Raises:
         Exception: x is not dimensionless
+
+    .. doctest :: math
+
+        >>> sin(pi/2)
+        1.0
+        >>> sin(2*second) # bad units!
+        Traceback (most recent call last):
+          ...
+        Exception: argument to sin must be dimensionless: 2 second
     '''
     return numpy.sin(value(x))
 
@@ -287,6 +340,15 @@ def cos(x):
 
     Raises:
         Exception: x is not dimensionless
+
+    .. doctest :: math
+
+        >>> cos(pi)
+        -1.0
+        >>> cos(2*second) # bad units!
+        Traceback (most recent call last):
+          ...
+        Exception: argument to cos must be dimensionless: 2 second
     '''
     return numpy.cos(value(x))
 
@@ -296,8 +358,17 @@ def tan(x):
 
     Raises:
         Exception: x is not dimensionless
+
+    .. doctest :: math
+
+        >>> print('%g' % tan(pi/4))
+        1
+        >>> tan(2*second) # bad units!
+        Traceback (most recent call last):
+          ...
+        Exception: argument to tan must be dimensionless: 2 second
     '''
-    return numpy.cos(value(x))
+    return numpy.tan(value(x))
 
 @units_match('arguments to atan2 must have the same units')
 def atan2(y,x):
@@ -315,6 +386,14 @@ def atan2(y,x):
     an unambiguous answer.  For this reason we do not export any of
     the other inverse trig functions.
 
+    .. doctest :: math
+
+        >>> atan2(5.0*meter, 0.0*meter)
+        1.5707963267948966
+        >>> atan2(2*second, 3) # units don't match!
+        Traceback (most recent call last):
+          ...
+        Exception: arguments to atan2 must have the same units: 3 vs 2 second
     '''
     return numpy.arctan2(value(y),value(x))
 
@@ -440,6 +519,8 @@ meter = scalar(1, (1, 0, 0))
 kg = scalar(1, (0, 1, 0))
 second = scalar(1, (0, 0, 1))
 Newton = kg*meter/second**2
+Joule = Newton*meter
+pi = math.pi
 
 class _rotation(object):
     def __init__(self,angle,axis):
@@ -770,8 +851,9 @@ class __display(object):
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         gl.glPushMatrix()
+        center = position(self.__center)
         glu.gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
-                  value(self.__center.x), value(self.__center.y), value(self.__center.z),
+                  center._x, center._y, center._z,
                   value(self.__up.x), value(self.__up.y), value(self.__up.z))
 
         lightZeroPosition = [10.,4.,10.,1.]
@@ -844,18 +926,21 @@ class __display(object):
                 self.__am_translating = False
         elif btn == 3: # scroll up
             if state == glut.GLUT_DOWN:
-                self.__camera = self.__center + (self.__camera - self.__center)/1.1
+                center = position(self.center)
+                self.__camera = center + (self.__camera - center)/1.1
             glut.glutPostRedisplay()
         elif btn == 4: # scroll down
             if state == glut.GLUT_DOWN:
-                self.__camera = self.__center + (self.__camera - self.__center)*1.1
+                center = position(self.center)
+                self.__camera = center + (self.__camera - center)*1.1
             glut.glutPostRedisplay()
         else:
             print('mouse', btn, state)
-    def _set_range(self, x):
-        dr = self.__camera - self.__center
-        print(self.__camera, self.__center, x)
-        self.__camera = self.__center + x*dr/abs(dr)
+    def _camera_range(self, x):
+        dr = self.__camera - position(self.__center)
+        self.__camera = position(self.__center) + x*dr/abs(dr)
+    def _camera_center(self, center):
+        self.__center = center
     def __onWheel(self, button, direction, x, y):
         print('scroll', button, direction, x, y)
     def __onMouseMotion(self, x, y):
@@ -866,7 +951,7 @@ class __display(object):
         if dx == 0 and dy == 0:
             return
         yhat = self.__up.normalized()
-        xhat = self.__up.cross((self.__center - self.__camera).normalized())
+        xhat = self.__up.cross((position(self.__center) - self.__camera).normalized())
         if self.__am_rotating:
             direction = (dy*xhat - dx*yhat).normalized()
             angle = 3*math.sqrt(dx**2 + dy**2)/self.__windowsize[1]
@@ -875,9 +960,9 @@ class __display(object):
             self.__up = R.rotate(self.__up)
             glut.glutPostRedisplay()
         elif self.__am_translating:
-            move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(self.__camera - self.__center)
+            move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(self.__camera - position(self.__center))
             self.__camera = self.__camera + move
-            self.__center = self.__center + move
+            self.__center = position(self.__center) + move
             glut.glutPostRedisplay()
     def __onReshape(self, width, height):
         self.__windowsize = (width, height)
@@ -974,10 +1059,19 @@ def timestep(dt):
     Raises:
         Exception: dt is not a time
 
-    You *must* call 'timestep' regularly in order for your simulation
-    to be animated.  'timestep' also performs a number of cleanup
+    You *must* call `timestep` regularly in order for your simulation
+    to be animated.  `timestep` also performs a number of cleanup
     tasks, such as allowing user interaction with the visualization.
 
+
+    .. testcode ::
+
+        t = 0*second
+        dt = 0.01*second
+        while t < 5*second:
+            # do something useful here
+            t += dt
+            timestep(dt)
     """
     check_units('time step dt must be a time', dt, second)
     return __x.timestep(dt)
@@ -993,6 +1087,10 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
         color: the color of the sphere
     Raises:
         Exception: the dimensions are not distances
+
+    .. testcode ::
+
+        s = sphere(vector(-1,3,0)*meter, radius=.5*meter, color=color.blue)
     """
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
@@ -1020,6 +1118,12 @@ def helix(pos1, pos2,
     Raises:
         Exception: the dimensions are not distances
 
+    .. testcode ::
+
+        s1 = sphere(vector(-1,0,0)*meter, color=color.red)
+        s2 = sphere(vector( 1,0,0)*meter, color=color.green)
+        s2.pos = vector(2,0,0)*meter # the spring stretches
+        h = helix(s1, s2)
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -1053,19 +1157,10 @@ def cylinder(pos1, pos2,
     The properties of the cylinder may be accessed and later modified
     as member variables of the object returned.
 
-    .. testsetup::
-
-        from physical import *
-
     .. testcode ::
 
         c = cylinder(vector(0,0,0)*meter, vector(1,0,0)*meter)
         c.pos2 = vector(2,0,0)*meter
-
-    .. testcleanup::
-
-        exit_visualization()
-
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -1086,6 +1181,12 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
         color: the color of the cylinder
     Raises:
         Exception: the dimensions are not distances
+
+    .. testcode ::
+
+        # create a box that is 1x1x0.1 meters in dimension,
+        # centered at the origin.
+        b = box(vector(0,0,0)*meter, 1*meter, 1*meter, 0.2*meter)
     """
     check_units('box dimensions must be distances',
                 pos, wx, wy, wz, meter)
@@ -1102,7 +1203,7 @@ def plot(color):
     This function returns a plot object.  You can add values to the
     plot as :math:`xy` pairs using code such as:
 
-    .. testsetup::
+    .. testsetup:: plot
 
         from physical import *
         t=0*second
@@ -1110,34 +1211,37 @@ def plot(color):
         mass=1*kg
         v=1*meter/second
 
-    .. testcode ::
+    .. testcode :: plot
 
         kinetic_energy = plot(color.red)
         while t < 5*second:
             kinetic_energy.plot(t, 0.5*mass*v**2)
+            v += 9.8*meter/second**2*dt
             t += dt
             timestep(dt)
-
-    .. testcleanup::
-
-        exit_visualization()
-
     """
     return __x.create_plot(color)
 
-def hline(value, color):
+def hline(y, color):
     """Create a horizontal line object.
 
     Args:
-        value: the y value of the line
+        y: the y value of the line
         color: the color of the line
     Raises:
         Exception: the color is not a color
+
+    .. testcode :: plot
+
+        # the y value must have same units as any other quantities
+        # plotted on vertical axis (e.g. example code for `plot`)
+        hline(0*Joule, color.blue)
+
     """
     yu = __x._y_units()
     if yu is not None:
         check_units('y coordinates must all have same units', y, yu)
-    return __x.create_hline(value, color)
+    return __x.create_hline(y, color)
 
 def savepng(fname):
     __x._save(fname)
@@ -1145,11 +1249,41 @@ def savepng(fname):
 #: the minimum frames per second that the renderer will draw.
 minimum_fps = 0.1/second
 
-def set_range(d):
-    '''Set the distance from the camera to the center of view.
+def camera_center(center):
+    '''Set the center of view.
+
+    Args:
+        center: the center of view, which is a position vector or
+           an object with a position
+    Raises:
+        Exception: the center is not a position or object with a
+            position
+
+    .. testcode :: center
+
+        s = sphere(vector(3,3,3)*meter, color=color.yellow)
+        camera_center(s)
     '''
-    check_units('range must be a distance', d, meter)
-    __x._set_range(d)
+    check_units('range must be a position', position(center), meter)
+    __x._camera_center(center)
+
+def camera_range(distance):
+    '''Set the distance from the camera to the center of view.
+
+    Args:
+        distance: the distance to the camera
+    Raises:
+        Exception: the distance does not have dimensions of distance
+
+    .. testcode :: center
+
+        camera_range(10*meter)
+    '''
+    check_units('range must be a distance', distance, meter)
+    __x._camera_range(distance)
 
 def exit_visualization():
+    global __x
     __x._window_closed = True
+    __x = __display()
+

@@ -28,6 +28,8 @@ savepng('/tmp/demo.png')
 xplot = plot(color.white)
 hline(0*meter, color.RGB(0.3,0.3,0.3))
 
+camera_center(s)
+
 t = 0*second
 dt = 0.001*second
 omega = numpy.pi/second

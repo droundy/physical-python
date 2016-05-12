@@ -34,7 +34,7 @@ for i in range(N):
                 h = helix(s, balls[i][j][k-1], radius=0.02*meter)
                 springs.append(h)
 
-set_range(2*N*meter)
+camera_range(2*N*meter)
 
 all_balls[0].pos += vector(0.01,0.02,0.03)*meter
 all_balls[1].pos -= vector(0.01,0.02,0.03)*meter
