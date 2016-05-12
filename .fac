@@ -3,7 +3,7 @@
 # c ~
 # c .tum
 
-| sphinx-build -W -b html -d _build/doctrees   . _build/html
+| sphinx-build -W -b html -d _build/doctrees   . html
 c .pyc
 c ~
 c .tum
