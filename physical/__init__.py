@@ -29,7 +29,7 @@ __all__ = ('vector',
            'plot', 'hline',
            'timestep', 'savepng',
            'minimum_fps', 'exit_visualization',
-           'camera_range', 'camera_center',
+           'camera_range', 'camera_center', 'camera_position',
            'meter', 'second', 'kg', 'Newton', 'Joule')
 
 try:
@@ -852,9 +852,10 @@ class __display(object):
         gl.glLoadIdentity()
         gl.glPushMatrix()
         center = position(self.__center)
-        glu.gluLookAt(value(self.__camera.x), value(self.__camera.y), value(self.__camera.z),
-                  center._x, center._y, center._z,
-                  value(self.__up.x), value(self.__up.y), value(self.__up.z))
+        camera = position(self.__camera)
+        glu.gluLookAt(camera._x, camera._y, camera._z,
+                      center._x, center._y, center._z,
+                      value(self.__up.x), value(self.__up.y), value(self.__up.z))
 
         lightZeroPosition = [10.,4.,10.,1.]
         lightZeroColor = [1,1,1,1.0]
@@ -888,7 +889,7 @@ class __display(object):
         width = self.__windowsize[0]
         height = self.__windowsize[1]
         data = gl.glReadPixels(0, 0, width, height, gl.GL_RGB, gl.GL_UNSIGNED_BYTE)
-        Image.fromstring("RGB", (width, height), data).save(fname)
+        Image.frombuffer("RGB", (width, height), data, 'raw', 'RGB', 0, -1).save(fname)
 
     def __init__(self, name = b'physical python'):
         self.__name = name
@@ -927,20 +928,22 @@ class __display(object):
         elif btn == 3: # scroll up
             if state == glut.GLUT_DOWN:
                 center = position(self.__center)
-                self.__camera = center + (self.__camera - center)/1.1
+                self.__camera = center + (position(self.__camera) - center)/1.1
             glut.glutPostRedisplay()
         elif btn == 4: # scroll down
             if state == glut.GLUT_DOWN:
                 center = position(self.__center)
-                self.__camera = center + (self.__camera - center)*1.1
+                self.__camera = center + (position(self.__camera) - center)*1.1
             glut.glutPostRedisplay()
         else:
             print('mouse', btn, state)
     def _camera_range(self, x):
-        dr = self.__camera - position(self.__center)
+        dr = position(self.__camera) - position(self.__center)
         self.__camera = position(self.__center) + x*dr/abs(dr)
     def _camera_center(self, center):
         self.__center = center
+    def _camera_position(self, pos):
+        self.__camera = pos
     def __onWheel(self, button, direction, x, y):
         print('scroll', button, direction, x, y)
     def __onMouseMotion(self, x, y):
@@ -951,17 +954,17 @@ class __display(object):
         if dx == 0 and dy == 0:
             return
         yhat = self.__up.normalized()
-        xhat = self.__up.cross((position(self.__center) - self.__camera).normalized())
+        xhat = self.__up.cross((position(self.__center) - position(self.__camera)).normalized())
         if self.__am_rotating:
             direction = (dy*xhat - dx*yhat).normalized()
             angle = 3*math.sqrt(dx**2 + dy**2)/self.__windowsize[1]
             R = _rotation(angle, direction)
-            self.__camera = R.rotate(self.__camera)
+            self.__camera = R.rotate(position(self.__camera))
             self.__up = R.rotate(self.__up)
             glut.glutPostRedisplay()
         elif self.__am_translating:
-            move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(self.__camera - position(self.__center))
-            self.__camera = self.__camera + move
+            move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(position(self.__camera) - position(self.__center))
+            self.__camera = position(self.__camera) + move
             self.__center = position(self.__center) + move
             glut.glutPostRedisplay()
     def __onReshape(self, width, height):
@@ -998,6 +1001,7 @@ class __display(object):
             atexit.register(sleep_forever)
 
     def timestep(self, dt):
+        self.init()
         self.__current_time += dt.v
         now = time.time()
         if now < self.__current_time:
@@ -1182,13 +1186,13 @@ def cylinder(pos1, pos2,
 
     .. testcode :: cylinder
 
-        c = cylinder(vector(0,0,0)*meter, vector(1,0,0)*meter)
-        c.pos2 = vector(.4,.3,-5)*meter
+        c = cylinder(vector(0,0,0)*meter, vector(1,0,0)*meter, radius=1*meter)
+        c.pos2 = vector(.4,.3,-.3)*meter
 
     .. testcode :: cylinder
         :hide:
 
-        camera_range(7*meter)
+        camera_range(5*meter)
         savepng('html/cylinder.png')
         timestep(1*second)
     """
@@ -1203,6 +1207,10 @@ def cylinder(pos1, pos2,
 def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     """Create a box object.
 
+    .. image :: html/box.png
+         :align: right
+         :width: 8em
+
     Args:
         pos: the initial position of the center of the box
         wx: the width of the box in the x direction
@@ -1212,11 +1220,18 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     Raises:
         Exception: the dimensions are not distances
 
-    .. testcode ::
+    .. testcode :: box
 
         # create a box that is 1x1x0.1 meters in dimension,
         # centered at the origin.
         b = box(vector(0,0,0)*meter, 1*meter, 1*meter, 0.2*meter)
+        camera_position(vector(.5,1.5,1)*meter)
+
+    .. testcode :: box
+        :hide:
+
+        savepng('html/box.png')
+        timestep(1*second)
     """
     check_units('box dimensions must be distances',
                 pos, wx, wy, wz, meter)
@@ -1296,6 +1311,24 @@ def camera_center(center):
     '''
     check_units('range must be a position', position(center), meter)
     __x._camera_center(center)
+
+def camera_position(camera):
+    '''Set the position of the camera.
+
+    Args:
+        camera: the position of the camera, which is a position vector or
+           an object with a position
+    Raises:
+        Exception: the `camera` is not a position or object with a
+            position
+
+    .. testcode :: camera_position
+
+        s = sphere(vector(3,3,3)*meter, color=color.yellow)
+        camera_position(s)
+    '''
+    check_units('range must be a position', position(camera), meter)
+    __x._camera_position(camera)
 
 def camera_range(distance):
     '''Set the distance from the camera to the center of view.
