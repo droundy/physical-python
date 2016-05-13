@@ -926,12 +926,12 @@ class __display(object):
                 self.__am_translating = False
         elif btn == 3: # scroll up
             if state == glut.GLUT_DOWN:
-                center = position(self.center)
+                center = position(self.__center)
                 self.__camera = center + (self.__camera - center)/1.1
             glut.glutPostRedisplay()
         elif btn == 4: # scroll down
             if state == glut.GLUT_DOWN:
-                center = position(self.center)
+                center = position(self.__center)
                 self.__camera = center + (self.__camera - center)*1.1
             glut.glutPostRedisplay()
         else:
