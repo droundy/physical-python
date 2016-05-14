@@ -770,48 +770,42 @@ class _Box(object):
         # glut.glutSolidCube(1)
         gl.glBegin(gl.GL_QUADS)
         gl.glNormal3f(-1,0,0)
-        gl.glVertex3f(-self.wx.v, -self.wy.v,  self.wz.v);
-        gl.glVertex3f(-self.wx.v,  self.wy.v,  self.wz.v);
-        gl.glVertex3f(-self.wx.v,  self.wy.v, -self.wz.v);
-        gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v,  0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v,  0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v, -0.5*self.wz.v);
 
         gl.glNormal3f(1,0,0)
-        gl.glVertex3f(self.wx.v, -self.wy.v, -self.wz.v);
-        gl.glVertex3f(self.wx.v,  self.wy.v, -self.wz.v);
-        gl.glVertex3f(self.wx.v,  self.wy.v,  self.wz.v);
-        gl.glVertex3f(self.wx.v, -self.wy.v,  self.wz.v);
+        gl.glVertex3f(0.5*self.wx.v, -0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(0.5*self.wx.v,  0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(0.5*self.wx.v,  0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
 
         gl.glNormal3f(0,1,0)
-        gl.glVertex3f( self.wx.v, self.wy.v, -self.wz.v);
-        gl.glVertex3f(-self.wx.v, self.wy.v, -self.wz.v);
-        gl.glVertex3f(-self.wx.v, self.wy.v,  self.wz.v);
-        gl.glVertex3f( self.wx.v, self.wy.v,  self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v, 0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, 0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, 0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v, 0.5*self.wy.v,  0.5*self.wz.v);
 
         gl.glNormal3f(0,-1,0)
-        gl.glVertex3f( self.wx.v, -self.wy.v,  self.wz.v);
-        gl.glVertex3f(-self.wx.v, -self.wy.v,  self.wz.v);
-        gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
-        gl.glVertex3f( self.wx.v, -self.wy.v, -self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v, -0.5*self.wy.v, -0.5*self.wz.v);
 
         gl.glNormal3f(0,0,1)
-        gl.glVertex3f( self.wx.v,  self.wy.v,  self.wz.v);
-        gl.glVertex3f(-self.wx.v,  self.wy.v,  self.wz.v);
-        gl.glVertex3f(-self.wx.v, -self.wy.v,  self.wz.v);
-        gl.glVertex3f( self.wx.v, -self.wy.v,  self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v,  0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v,  0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
 
         gl.glNormal3f(0,0,-1)
-        gl.glVertex3f( self.wx.v, -self.wy.v, -self.wz.v);
-        gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
-        gl.glVertex3f(-self.wx.v,  self.wy.v, -self.wz.v);
-        gl.glVertex3f( self.wx.v,  self.wy.v, -self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v, -0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f(-0.5*self.wx.v,  0.5*self.wy.v, -0.5*self.wz.v);
+        gl.glVertex3f( 0.5*self.wx.v,  0.5*self.wy.v, -0.5*self.wz.v);
 
         gl.glEnd()
-        # gl.glBegin(gl.GL_POLYGON)
-        # gl.glVertex3f( self.wx.v, -self.wy.v, -self.wz.v);
-        # gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
-        # gl.glVertex3f(-self.wx.v,  self.wy.v, -self.wz.v);
-        # gl.glVertex3f( self.wx.v,  self.wy.v, -self.wz.v);
-        # gl.glEnd()
         gl.glPopMatrix()
     def __str__(self):
         return 'box(%s, %s, %s, %s)' % (self.pos, self.wx, self.wy, self.wz)
