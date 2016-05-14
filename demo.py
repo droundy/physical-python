@@ -33,7 +33,7 @@ camera_center(s)
 t = 0*second
 dt = 0.001*second
 omega = numpy.pi/second
-while t < 9.5*second:
+while t < 9.8*second:
     s.pos.x = 3*meter*sin(2*omega*t)
     s2.pos.z = 3*meter*cos(omega*t)
     timestep(dt)

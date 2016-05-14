@@ -651,7 +651,6 @@ class _Sphere(object):
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
         check_units('radius must have dimensions of distance', self.radius, meter)
-        # glut.glutSolidSphere(value(self.radius), 60, 60)
         q = glu.gluNewQuadric()
         glu.gluSphere(q, value(self.radius), 60, 60)
         gl.glPopMatrix()
@@ -766,8 +765,6 @@ class _Box(object):
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
         check_units('box dimensions must be distances', self.wx, self.wy, self.wz, meter)
-        # gl.glScale(value(self.wx), value(self.wy), value(self.wz))
-        # glut.glutSolidCube(1)
         gl.glBegin(gl.GL_QUADS)
         gl.glNormal3f(-1,0,0)
         gl.glVertex3f(-0.5*self.wx.v, -0.5*self.wy.v,  0.5*self.wz.v);
