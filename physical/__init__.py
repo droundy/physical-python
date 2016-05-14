@@ -237,8 +237,10 @@ class scalar(Units):
         mks = Units._sub(self, b)
         return scalar(self.v - value(b), mks)
     def __pow__(self, b):
-        mks = Units._pow(self, b)
-        return scalar(self.v **value(b), mks)
+        if units(b) != (0,0,0):
+            raise Exception('you cannot take quantity to a power with dimensions %s' % Units.__repr__(b))
+        a = self._mks
+        return scalar(self.v **value(b), (a[0]*b, a[1]*b, a[2]*b))
     def __mul__(self, b):
         smks = self._mks; bmks = getattr(b, '_mks', (0,0,0))
         mks = (smks[0]+bmks[0], smks[1]+bmks[1], smks[2]+bmks[2])
