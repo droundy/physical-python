@@ -44,7 +44,7 @@ try:
 except:
     print('Using math instead of numpy, things may break')
     import math as numpy
-import sys, math, atexit, time, traceback
+import os, sys, math, atexit, time, traceback
 import functools
 
 import physical.color
@@ -651,7 +651,9 @@ class _Sphere(object):
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
         check_units('radius must have dimensions of distance', self.radius, meter)
-        glut.glutSolidSphere(value(self.radius), 60, 60)
+        # glut.glutSolidSphere(value(self.radius), 60, 60)
+        q = glu.gluNewQuadric()
+        glu.gluSphere(q, value(self.radius), 60, 60)
         gl.glPopMatrix()
     def __repr__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
@@ -764,8 +766,52 @@ class _Box(object):
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
         check_units('box dimensions must be distances', self.wx, self.wy, self.wz, meter)
-        gl.glScale(value(self.wx), value(self.wy), value(self.wz))
-        glut.glutSolidCube(1)
+        # gl.glScale(value(self.wx), value(self.wy), value(self.wz))
+        # glut.glutSolidCube(1)
+        gl.glBegin(gl.GL_QUADS)
+        gl.glNormal3f(-1,0,0)
+        gl.glVertex3f(-self.wx.v, -self.wy.v,  self.wz.v);
+        gl.glVertex3f(-self.wx.v,  self.wy.v,  self.wz.v);
+        gl.glVertex3f(-self.wx.v,  self.wy.v, -self.wz.v);
+        gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
+
+        gl.glNormal3f(1,0,0)
+        gl.glVertex3f(self.wx.v, -self.wy.v, -self.wz.v);
+        gl.glVertex3f(self.wx.v,  self.wy.v, -self.wz.v);
+        gl.glVertex3f(self.wx.v,  self.wy.v,  self.wz.v);
+        gl.glVertex3f(self.wx.v, -self.wy.v,  self.wz.v);
+
+        gl.glNormal3f(0,1,0)
+        gl.glVertex3f( self.wx.v, self.wy.v, -self.wz.v);
+        gl.glVertex3f(-self.wx.v, self.wy.v, -self.wz.v);
+        gl.glVertex3f(-self.wx.v, self.wy.v,  self.wz.v);
+        gl.glVertex3f( self.wx.v, self.wy.v,  self.wz.v);
+
+        gl.glNormal3f(0,-1,0)
+        gl.glVertex3f( self.wx.v, -self.wy.v,  self.wz.v);
+        gl.glVertex3f(-self.wx.v, -self.wy.v,  self.wz.v);
+        gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
+        gl.glVertex3f( self.wx.v, -self.wy.v, -self.wz.v);
+
+        gl.glNormal3f(0,0,1)
+        gl.glVertex3f( self.wx.v,  self.wy.v,  self.wz.v);
+        gl.glVertex3f(-self.wx.v,  self.wy.v,  self.wz.v);
+        gl.glVertex3f(-self.wx.v, -self.wy.v,  self.wz.v);
+        gl.glVertex3f( self.wx.v, -self.wy.v,  self.wz.v);
+
+        gl.glNormal3f(0,0,-1)
+        gl.glVertex3f( self.wx.v, -self.wy.v, -self.wz.v);
+        gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
+        gl.glVertex3f(-self.wx.v,  self.wy.v, -self.wz.v);
+        gl.glVertex3f( self.wx.v,  self.wy.v, -self.wz.v);
+
+        gl.glEnd()
+        # gl.glBegin(gl.GL_POLYGON)
+        # gl.glVertex3f( self.wx.v, -self.wy.v, -self.wz.v);
+        # gl.glVertex3f(-self.wx.v, -self.wy.v, -self.wz.v);
+        # gl.glVertex3f(-self.wx.v,  self.wy.v, -self.wz.v);
+        # gl.glVertex3f( self.wx.v,  self.wy.v, -self.wz.v);
+        # gl.glEnd()
         gl.glPopMatrix()
     def __str__(self):
         return 'box(%s, %s, %s, %s)' % (self.pos, self.wx, self.wy, self.wz)
@@ -929,12 +975,12 @@ class __display(object):
             if state == glut.GLUT_DOWN:
                 center = position(self.__center)
                 self.__camera = center + (position(self.__camera) - center)/1.1
-            glut.glutPostRedisplay()
+            self.__glutPostRedisplay()
         elif btn == 4: # scroll down
             if state == glut.GLUT_DOWN:
                 center = position(self.__center)
                 self.__camera = center + (position(self.__camera) - center)*1.1
-            glut.glutPostRedisplay()
+            self.__glutPostRedisplay()
         else:
             print('mouse', btn, state)
     def _camera_range(self, x):
@@ -961,35 +1007,51 @@ class __display(object):
             R = _rotation(angle, direction)
             self.__camera = R.rotate(position(self.__camera))
             self.__up = R.rotate(self.__up)
-            glut.glutPostRedisplay()
+            self.__glutPostRedisplay()
         elif self.__am_translating:
             move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(position(self.__camera) - position(self.__center))
             self.__camera = position(self.__camera) + move
             self.__center = position(self.__center) + move
-            glut.glutPostRedisplay()
+            self.__glutPostRedisplay()
     def __onReshape(self, width, height):
         self.__windowsize = (width, height)
-        glut.glutPostRedisplay()
+        self.__glutPostRedisplay()
 
     def init(self):
         if not self.__is_initialized:
             self.__is_initialized = True
-            sys.argv = glut.glutInit(sys.argv)
-            glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
             self.__windowsize = (400,400)
-            glut.glutInitWindowSize(self.__windowsize[0],self.__windowsize[1])
-            glut.glutCreateWindow(self.__name)
+            if os.environ.get('PYOPENGL_PLATFORM','') == 'osmesa':
+                import OpenGL.arrays as glarrays
+                import OpenGL.osmesa as osmesa
+                ctx = osmesa.OSMesaCreateContext(gl.GL_RGBA, None)
+                self.__buf = glarrays.GLubyteArray.zeros((self.__windowsize[1], self.__windowsize[0], 4))
+                osmesa.OSMesaMakeCurrent(ctx, self.__buf, gl.GL_UNSIGNED_BYTE,
+                                         self.__windowsize[0],
+                                         self.__windowsize[1])
+                def nullpost():
+                    pass
+                self.__glutPostRedisplay = nullpost
+                self.__glutMainLoopEvent = nullpost
+            else:
+                sys.argv = glut.glutInit(sys.argv)
+                glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
+                glut.glutInitWindowSize(self.__windowsize[0],self.__windowsize[1])
+                glut.glutCreateWindow(self.__name)
+                self.__glutPostRedisplay = glut.glutPostRedisplay
+                self.__glutMainLoopEvent = glut.glutMainLoopEvent
 
             gl.glShadeModel(gl.GL_SMOOTH)
             gl.glEnable(gl.GL_CULL_FACE)
             gl.glEnable(gl.GL_DEPTH_TEST)
             gl.glEnable(gl.GL_LIGHTING)
 
-            glut.glutDisplayFunc(self.__display)
-            glut.glutMouseFunc(self.__onMouse)
-            glut.glutMotionFunc(self.__onMouseMotion)
-            glut.glutMouseWheelFunc(self.__onWheel)
-            glut.glutReshapeFunc(self.__onReshape)
+            if os.environ.get('PYOPENGL_PLATFORM','') != 'osmesa':
+                glut.glutDisplayFunc(self.__display)
+                glut.glutMouseFunc(self.__onMouse)
+                glut.glutMotionFunc(self.__onMouseMotion)
+                glut.glutMouseWheelFunc(self.__onWheel)
+                glut.glutReshapeFunc(self.__onReshape)
 
             self.__onReshape(400,400)
             def sleep_forever():
@@ -997,27 +1059,28 @@ class __display(object):
                 if not self._window_closed:
                     print('program complete, but still running visualization...')
                     while True:
-                        glut.glutMainLoopEvent()
-            atexit.register(sleep_forever)
-
+                        self.__glutMainLoopEvent()
+            if os.environ.get('PYOPENGL_PLATFORM','') != 'osmesa':
+                atexit.register(sleep_forever)
     def timestep(self, dt):
         self.init()
         self.__current_time += dt.v
         now = time.time()
         if now < self.__current_time:
             self.__am_slow = False
-            glut.glutPostRedisplay()
+            self.__glutPostRedisplay()
             # print('waiting', self.__current_time - now, 'out of', dt)
-            time.sleep(self.__current_time - now)
+            if os.environ.get('PYOPENGL_PLATFORM','') != 'osmesa':
+                time.sleep(self.__current_time - now)
             # print('one frame took', time.time() - self.__last_time)
             self.__last_time = time.time()
         elif now > self.__last_time + 0.1:
             self.__am_slow = True
-            glut.glutPostRedisplay()
+            self.__glutPostRedisplay()
             self.__last_time = time.time()
         else:
             pass
-        glut.glutMainLoopEvent()
+        self.__glutMainLoopEvent()
     def create_plot(self, c):
         if type(c) != color.RGB:
             raise Exception('plot must be given a color')
@@ -1084,7 +1147,7 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
     """
     Create a sphere object.
 
-    .. image :: html/sphere.png
+    .. image :: figures/sphere.png
          :align: right
          :width: 8em
 
@@ -1103,7 +1166,7 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
     .. testcode :: sphere
         :hide:
 
-        savepng('html/sphere.png')
+        savepng('figures/sphere.png')
     """
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
@@ -1115,7 +1178,7 @@ def helix(pos1, pos2,
           twists=5):
     """Create a helix object.
 
-    .. image :: html/helix.png
+    .. image :: figures/helix.png
          :align: right
          :width: 8em
 
@@ -1146,7 +1209,7 @@ def helix(pos1, pos2,
         :hide:
 
         camera_range(7*meter)
-        savepng('html/helix.png')
+        savepng('figures/helix.png')
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -1165,7 +1228,7 @@ def cylinder(pos1, pos2,
              radius=0.1*meter, color=color.RGB(1,1,1)):
     """Create a cylinder object.
 
-    .. image :: html/cylinder.png
+    .. image :: figures/cylinder.png
          :align: right
          :width: 8em
 
@@ -1193,7 +1256,7 @@ def cylinder(pos1, pos2,
         :hide:
 
         camera_range(5*meter)
-        savepng('html/cylinder.png')
+        savepng('figures/cylinder.png')
         timestep(1*second)
     """
     check_units('position must be a distance',
@@ -1207,7 +1270,7 @@ def cylinder(pos1, pos2,
 def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     """Create a box object.
 
-    .. image :: html/box.png
+    .. image :: figures/box.png
          :align: right
          :width: 8em
 
@@ -1230,7 +1293,7 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     .. testcode :: box
         :hide:
 
-        savepng('html/box.png')
+        savepng('figures/box.png')
         timestep(1*second)
     """
     check_units('box dimensions must be distances',

@@ -11,8 +11,6 @@ s2 = sphere()
 s.color = color.blue
 origin = sphere(radius=0.1*meter, color=color.red)
 
-b = box(vector(0, 0, -1)*meter, 3*meter, 3*meter, 0.2*meter, color.yellow)
-
 s.pos.x = 1.1*meter
 
 inch = 0.0254*meter
@@ -23,7 +21,7 @@ s2.pos.x = -1.1*meter
 
 h = helix(s, s2)
 
-savepng('/tmp/demo.png')
+savepng('/tmp/sphere-demo.png')
 
 xplot = plot(color.white)
 hline(0*meter, color.RGB(0.3,0.3,0.3))
