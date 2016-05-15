@@ -28,7 +28,8 @@ savepng('/tmp/demo.png')
 xplot = plot(color.white)
 hline(0*meter, color.RGB(0.3,0.3,0.3))
 
-camera_center(s)
+camera.center = s
+camera.range = 20*meter
 
 t = 0*second
 dt = 0.001*second
