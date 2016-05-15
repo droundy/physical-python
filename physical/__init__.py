@@ -1125,8 +1125,7 @@ class Camera(object):
 
         .. testcode :: camera_position
 
-           s = sphere(vector(3,3,3)*meter, color=color.yellow)
-           camera.position = s
+           camera.up = vector(0,1,0)
         '''
         return self.__up
     @up.setter
@@ -1139,7 +1138,7 @@ class Camera(object):
     def center(self):
         '''the position at which the camera points
 
-        .. testcode :: camera_position
+        .. testcode :: camera_center
 
            s = sphere(vector(3,3,3)*meter, color=color.yellow)
            camera.center = s
@@ -1157,6 +1156,10 @@ class Camera(object):
 
         The distance can be assigned to, which has the effect of shifting
         the camera towards or away from the center.
+
+        .. testcode :: camera_range
+
+           camera.range = 5*meter
         '''
         return abs(position(self.__center) - position(self.__position))
     @range.setter
