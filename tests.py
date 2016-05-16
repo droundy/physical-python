@@ -137,5 +137,12 @@ class TestUnits(unittest.TestCase):
         with self.assertRaises(Exception):
             a.cross(5*meter)
 
+class TestVisualization(unittest.TestCase):
+    def test_windowsize(self):
+        camera.windowsize = (200,200)
+        self.assertEqual(camera.windowsize, (200,200))
+        camera.windowsize = (400,200)
+        self.assertEqual(camera.windowsize, (400,200))
+
 if __name__ == '__main__':
     unittest.main()
