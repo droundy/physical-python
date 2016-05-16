@@ -829,7 +829,8 @@ class __display(object):
     def __drawstuff(self):
         # we are sloppy and reset the viewport to window size each
         # time, and reset the perspective each time as well.
-        gl.glViewport(0,0,self.__windowsize[0],self.__windowsize[1])
+        ws = camera.windowsize
+        gl.glViewport(0,0,ws[0],ws[1])
         if self.__am_slow:
             gl.glClearColor(0.2,0.,0.,1.)
         else:
@@ -854,10 +855,6 @@ class __display(object):
             gl.glMatrixMode(gl.GL_PROJECTION)
             gl.glPushMatrix()
             gl.glLoadIdentity()
-
-            # This sets up an orthographic projection, appropriate for 2D
-            # material.
-            #gl.glOrtho(0,self.__windowsize[0], self.__windowsize[1], 0,-1,1)
 
             # set up a temporary and blank model matrix
             gl.glMatrixMode(gl.GL_MODELVIEW)
@@ -886,7 +883,8 @@ class __display(object):
 
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        glu.gluPerspective(40.,self.__windowsize[0]/self.__windowsize[1],1.,1000.)
+        ws = camera.windowsize
+        glu.gluPerspective(40., ws[0]/ws[1], 1., 1000.)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         gl.glPushMatrix()
@@ -925,8 +923,7 @@ class __display(object):
         from PIL import Image
         self.__drawstuff()
         gl.glPixelStorei(gl.GL_PACK_ALIGNMENT, 1)
-        width = self.__windowsize[0]
-        height = self.__windowsize[1]
+        width, height = camera.windowsize
         data = gl.glReadPixels(0, 0, width, height, gl.GL_RGB, gl.GL_UNSIGNED_BYTE)
         Image.frombuffer("RGB", (width, height), data, 'raw', 'RGB', 0, -1).save(fname)
 
@@ -984,32 +981,31 @@ class __display(object):
         xhat = camera.up.cross(position(camera.center) - position(camera.position)).normalized()
         if self.__am_rotating:
             direction = (dy*xhat - dx*yhat).normalized()
-            angle = 3*math.sqrt(dx**2 + dy**2)/self.__windowsize[1]
+            angle = 3*math.sqrt(dx**2 + dy**2)/camera.windowsize[1]
             R = _rotation(angle, direction)
             camera.position = R.rotate(position(camera.position))
             camera.up = R.rotate(camera.up)
             self.__glutPostRedisplay()
         elif self.__am_translating:
-            move = 0.6*(dx*xhat + dy*yhat)/self.__windowsize[1]*abs(position(camera.position) - position(camera.center))
+            move = 0.6*(dx*xhat + dy*yhat)/camera.windowsize[1]*abs(position(camera.position) - position(camera.center))
             camera.position = position(camera.position) + move
             camera.center = position(camera.center) + move
             self.__glutPostRedisplay()
     def __onReshape(self, width, height):
-        self.__windowsize = (width, height)
+        camera.windowsize = (width, height)
         self.__glutPostRedisplay()
 
     def init(self):
         if not self.__is_initialized:
             self.__is_initialized = True
-            self.__windowsize = (400,400)
+            ws = camera.windowsize
             if os.environ.get('PYOPENGL_PLATFORM','') == 'osmesa':
                 import OpenGL.arrays as glarrays
                 import OpenGL.osmesa as osmesa
                 ctx = osmesa.OSMesaCreateContext(gl.GL_RGBA, None)
-                self.__buf = glarrays.GLubyteArray.zeros((self.__windowsize[1], self.__windowsize[0], 4))
+                self.__buf = glarrays.GLubyteArray.zeros((camera.windowsize[1], camera.windowsize[0], 4))
                 osmesa.OSMesaMakeCurrent(ctx, self.__buf, gl.GL_UNSIGNED_BYTE,
-                                         self.__windowsize[0],
-                                         self.__windowsize[1])
+                                         ws[0], ws[1])
                 def nullpost():
                     pass
                 self.__glutPostRedisplay = nullpost
@@ -1017,7 +1013,7 @@ class __display(object):
             else:
                 sys.argv = glut.glutInit(sys.argv)
                 glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA | glut.GLUT_DEPTH)
-                glut.glutInitWindowSize(self.__windowsize[0],self.__windowsize[1])
+                glut.glutInitWindowSize(ws[0],ws[1])
                 glut.glutCreateWindow(self.__name)
                 self.__glutPostRedisplay = glut.glutPostRedisplay
                 self.__glutMainLoopEvent = glut.glutMainLoopEvent
@@ -1102,6 +1098,7 @@ class Camera(object):
     __center = vector(0,0,0)*meter
     __position = vector(0,10,0)*meter
     __up = vector(0,0,1)*meter
+    __windowsize = (400,400)
     def __str__(self):
         return str('{} {} {}'.format(self.__center, self.__position, self.__up))
     @property
@@ -1173,6 +1170,23 @@ class Camera(object):
             self.__position = vector(0,10,0)*meter
             return
         self.__position = position(self.__center) + v*dr/abs(dr)
+
+    @property
+    def windowsize(self):
+        '''the size of the window in pixels
+
+        The windowsize can be assigned to, but only prior to creating
+        any objects.
+
+        .. testcode :: windowsize
+
+           camera.windowsize = (200,200)
+
+        '''
+        return self.__windowsize
+    @windowsize.setter
+    def windowsize(self,v):
+        self.__windowsize = v
 
 camera = Camera()
 __x = __display()
@@ -1257,6 +1271,11 @@ def helix(pos1, pos2,
     Raises:
         Exception: the dimensions are not distances
 
+    .. testsetup :: helix
+
+        from physical import *
+        camera.windowsize = (200,200)
+
     .. testcode :: helix
 
         s1 = sphere(vector(-1,0,0)*meter, color=color.red)
@@ -1267,6 +1286,7 @@ def helix(pos1, pos2,
     .. testcode :: helix
         :hide:
 
+        camera.windowsize = (200,200)
         camera.range = 7*meter
         savepng('figures/helix.png')
     """
