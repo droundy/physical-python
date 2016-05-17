@@ -230,6 +230,8 @@ class scalar(Units):
         """
         self._mks = mks
         self.v = v
+    def __neg__(self):
+        return scalar(-self.v, self._mks)
     def __add__(self, b):
         mks = Units._add(self, b)
         return scalar(self.v + value(b), mks)
@@ -473,6 +475,8 @@ class vector(Units):
     def normalized(self):
         return self / abs(self)
 
+    def __neg__(self):
+        return self.__new(-self._x, -self._y, -self._z, self._mks)
     def __add__(self, b):
         if type(b) != vector:
             raise Exception('cannot add vector to %s' % type(b))
@@ -896,7 +900,7 @@ class __display(object):
 
         lightZeroPosition = [10.,4.,10.,1.]
         lightZeroColor = [1,1,1,1.0]
-        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
+        # gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, lightZeroColor)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_CONSTANT_ATTENUATION, 0.1)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_LINEAR_ATTENUATION, 0.05)

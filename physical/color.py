@@ -9,7 +9,7 @@ from __future__ import division, print_function
 __all__ = ('RGB',
            'red', 'green', 'blue',
            'yellow', 'cyan', 'magenta',
-           'black', 'white')
+           'black', 'gray', 'white')
 
 class RGB(object):
     """A color stored in the RGB color space.
@@ -46,3 +46,5 @@ magenta = RGB(1,0,1)
 white = RGB(1,1,1)
 #: The color black
 black = RGB(0,0,0)
+#: The color gray
+gray = RGB(0.5,0.5,0.5)
