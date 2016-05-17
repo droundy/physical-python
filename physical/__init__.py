@@ -1003,7 +1003,7 @@ class __display(object):
                 import OpenGL.arrays as glarrays
                 import OpenGL.osmesa as osmesa
                 ctx = osmesa.OSMesaCreateContext(gl.GL_RGBA, None)
-                self.__buf = glarrays.GLubyteArray.zeros((camera.windowsize[1], camera.windowsize[0], 4))
+                self.__buf = glarrays.GLubyteArray.zeros((ws[1], ws[0], 4))
                 osmesa.OSMesaMakeCurrent(ctx, self.__buf, gl.GL_UNSIGNED_BYTE,
                                          ws[0], ws[1])
                 def nullpost():
@@ -1030,7 +1030,7 @@ class __display(object):
                 glut.glutMouseWheelFunc(self.__onWheel)
                 glut.glutReshapeFunc(self.__onReshape)
 
-            self.__onReshape(400,400)
+            self.__onReshape(ws[0],ws[1])
             def sleep_forever():
                 self.__am_slow = False
                 if not self._window_closed:
@@ -1222,7 +1222,6 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
 
     .. image :: figures/sphere.png
          :align: right
-         :width: 8em
 
     Args:
         pos: the initial position of the sphere in meters (defaults
@@ -1232,14 +1231,9 @@ def sphere(pos = vector(0,0,0)*meter, radius=1.0*meter, color=color.RGB(1,1,1)):
     Raises:
         Exception: the dimensions are not distances
 
-    .. testcode :: sphere
-
-        s = sphere(vector(-1,3,0)*meter, radius=1.5*meter, color=color.blue)
-
-    .. testcode :: sphere
-        :hide:
-
-        savepng('figures/sphere.png')
+    .. literalinclude:: sphere.py
+        :start-after: start
+        :end-before: done
     """
     check_units('position must have dimensions of distance', pos, meter)
     check_units('radius must have dimensions of distance', radius, meter)
@@ -1253,7 +1247,6 @@ def helix(pos1, pos2,
 
     .. image :: figures/helix.png
          :align: right
-         :width: 8em
 
     Args:
         pos1: the initial position of one end of the helix.  This may
@@ -1271,24 +1264,9 @@ def helix(pos1, pos2,
     Raises:
         Exception: the dimensions are not distances
 
-    .. testsetup :: helix
-
-        from physical import *
-        camera.windowsize = (200,200)
-
-    .. testcode :: helix
-
-        s1 = sphere(vector(-1,0,0)*meter, color=color.red)
-        s2 = sphere(vector( 1,0,0)*meter, color=color.green)
-        s2.pos = vector(2,0,0)*meter # the spring stretches
-        h = helix(s1, s2)
-
-    .. testcode :: helix
-        :hide:
-
-        camera.windowsize = (200,200)
-        camera.range = 7*meter
-        savepng('figures/helix.png')
+    .. literalinclude:: helix.py
+        :start-after: start
+        :end-before: done
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -1309,7 +1287,6 @@ def cylinder(pos1, pos2,
 
     .. image :: figures/cylinder.png
          :align: right
-         :width: 8em
 
     Args:
         pos1: the initial position of one end of the cylinder.  This may
@@ -1326,17 +1303,9 @@ def cylinder(pos1, pos2,
     The properties of the cylinder may be accessed and later modified
     as member variables of the object returned.
 
-    .. testcode :: cylinder
-
-        c = cylinder(vector(0,0,0)*meter, vector(1,0,0)*meter, radius=1*meter)
-        c.pos2 = vector(.4,.3,-.3)*meter
-
-    .. testcode :: cylinder
-        :hide:
-
-        camera.range = 5*meter
-        savepng('figures/cylinder.png')
-        timestep(1*second)
+    .. literalinclude :: cylinder.py
+        :start-after: start
+        :end-before: done
     """
     check_units('position must be a distance',
                 position(pos1), position(pos2), meter)
@@ -1351,7 +1320,6 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
 
     .. image :: figures/box.png
          :align: right
-         :width: 8em
 
     Args:
         pos: the initial position of the center of the box
@@ -1362,18 +1330,9 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     Raises:
         Exception: the dimensions are not distances
 
-    .. testcode :: box
-
-        # create a box that is 1x1x0.1 meters in dimension,
-        # centered at the origin.
-        b = box(vector(0,0,0)*meter, 1*meter, 1*meter, 0.2*meter)
-        camera.position = vector(.5,1.5,1)*meter
-
-    .. testcode :: box
-        :hide:
-
-        savepng('figures/box.png')
-        timestep(1*second)
+    .. literalinclude:: box.py
+        :start-after: start
+        :end-before: done
     """
     check_units('box dimensions must be distances',
                 pos, wx, wy, wz, meter)

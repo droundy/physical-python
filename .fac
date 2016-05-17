@@ -5,6 +5,9 @@
 
 | sphinx-build -W -b html -d _build/doctrees   . html
 < figures/sphere.png
+< figures/cylinder.png
+< figures/box.png
+< figures/helix.png
 c .pyc
 c ~
 c .tum
@@ -13,9 +16,8 @@ c .inv
 C _build/doctrees
 C .git
 
-# run the doctests, which build the images needed for the documentation
+# run the doctests
 | PYOPENGL_PLATFORM=osmesa sphinx-build -b doctest -d _build/doctrees   . _build/doctest
-> figures/sphere.png
 c .pyc
 c ~
 c .tum
@@ -29,4 +31,16 @@ C html
 c .pyc
 
 | python2 tests.py
+c .pyc
+
+| PYOPENGL_PLATFORM=osmesa python3 helix.py
+c .pyc
+
+| PYOPENGL_PLATFORM=osmesa python3 sphere.py
+c .pyc
+
+| PYOPENGL_PLATFORM=osmesa python3 cylinder.py
+c .pyc
+
+| PYOPENGL_PLATFORM=osmesa python3 box.py
 c .pyc
