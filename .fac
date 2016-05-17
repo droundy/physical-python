@@ -9,14 +9,23 @@
 < figures/box.png
 < figures/helix.png
 c .pyc
+c ~
+c .tum
+c .js
 c .inv
 C _build/doctrees
+C .git
 
 # run the doctests
 | PYOPENGL_PLATFORM=osmesa sphinx-build -b doctest -d _build/doctrees   . _build/doctest
 c .pyc
+c ~
+c .tum
+c .js
 c .inv
 C _build/doctrees
+C .git
+C html
 
 | python3 tests.py
 c .pyc
