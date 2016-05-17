@@ -9,6 +9,8 @@ The physical python module
 .. toctree::
    :maxdepth: 2
 
+   installation.rst
+
    physical-color.rst
 
 .. automodule:: physical
