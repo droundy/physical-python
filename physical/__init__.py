@@ -233,6 +233,8 @@ class scalar(Units):
         """
         self._mks = mks
         self.v = v
+    def __abs__(self):
+        return scalar(abs(self.v), self._mks)
     def __neg__(self):
         return scalar(-self.v, self._mks)
     def __add__(self, b):

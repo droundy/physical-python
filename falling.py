@@ -15,12 +15,21 @@ mph = 0.44704*meter/second
 wizard = sphere(vector(0*meter, 0*meter, height), radius=1*meter, color=color.red)
 victim = sphere(vector(3*meter, 0*meter, height), radius=1*meter, color=color.blue)
 
+# trees
 for i in range(100):
     x, y = random.gauss(0.0, 1.0)*height/8, random.gauss(0.0, 1.0)*height/8
     h = random.gauss(10.0, 5.0)*meter
     # print(x,y,h)
     sphere(vector(x,y,h), radius = h/3, color=color.green)
     cylinder(vector(x,y,0*meter), vector(x,y,h), color=color.gray, radius=1*meter)
+
+# ponds
+random.seed(135)
+for i in range(10):
+    x, y = random.gauss(0.0, 1.0)*height/8, random.gauss(0.0, 1.0)*height/8
+    r = abs(random.gauss(5.0, 10.0)*meter)
+    print(x,y,r)
+    cylinder(vector(x,y,0*meter), vector(x,y,1.1*meter), color=color.blue, radius=r)
 
 ground = box(pos=vector(0,0,0)*meter,
              wx=height, wy=height, wz=1*meter, color=color.green)
