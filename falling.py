@@ -3,6 +3,10 @@ from __future__ import division, print_function
 from physical import *
 import random
 
+random.seed(0)
+
+camera.windowsize=(400,300)
+
 height = 960*meter
 delay_time = 5*second
 
@@ -23,7 +27,8 @@ ground = box(pos=vector(0,0,0)*meter,
 
 # camera.range = 3*height
 camera.center = victim
-camera.position = wizard.pos + vector(1*meter, 5*meter, 15*meter)
+camera_offset = vector(1*meter, 5*meter, 10*meter)
+camera.position = wizard.pos + camera_offset
 
 t=0*second
 dt=0.01*second
@@ -39,7 +44,7 @@ while t < 10*60*second and victim.pos.z > 0:
     victim.v += (g + drag(victim.v, 120*mph))*dt
     if t > delay_time:
         wizard.v += (2.11*g + drag(victim.v, 150*mph))*dt
-        if abs(wizard.pos - victim.pos) < 5*meter:
+        if abs(wizard.pos - victim.pos) < 3.3*meter:
             print('got ya!')
             break
         # else:
@@ -48,7 +53,7 @@ while t < 10*60*second and victim.pos.z > 0:
     wizard.pos += wizard.v*dt
     timestep(dt)
     t += dt
-    camera.position = wizard.pos + vector(1*meter, 5*meter, 15*meter)
+    camera.position = wizard.pos + camera_offset
 
 vmean = 0.5*wizard.v + 0.5*victim.v
 wizard.v = vmean
@@ -63,7 +68,9 @@ while t < 10*60*second and wizard.v.z < 0*meter/second and victim.pos.z > 0:
     wizard.pos += wizard.v*dt
     timestep(dt)
     t += dt
-    camera.position = wizard.pos + vector(1*meter, 5*meter, 15*meter)
+    camera.position = wizard.pos + camera_offset
+    if victim.pos.z > 130*meter and victim.pos.z < 135*meter:
+        savepng('figures/falling.png')
 
 if wizard.v.z > 0*meter/second:
     print('we are safe at last! altitude', victim.pos.z)

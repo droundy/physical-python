@@ -1,4 +1,7 @@
 """
+.. image :: figures/falling.png
+    :align: right
+
 A python package aimed at teaching students physics through having
 them program using 3d simulation. A key goal is to provide clear error
 messages for mistakes common among intro physics students. Physical is
@@ -898,15 +901,15 @@ class __display(object):
                       center._x, center._y, center._z,
                       value(camera.up.x), value(camera.up.y), value(camera.up.z))
 
-        lightZeroPosition = [10.,4.,10.,1.]
+        lightZeroPosition = [10.,4.,10.,0]
         lightZeroColor = [1,1,1,1.0]
-        # gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
+        gl.glLightfv(gl.GL_LIGHT0, gl.GL_POSITION, lightZeroPosition)
         gl.glLightfv(gl.GL_LIGHT0, gl.GL_DIFFUSE, lightZeroColor)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_CONSTANT_ATTENUATION, 0.1)
         gl.glLightf(gl.GL_LIGHT0, gl.GL_LINEAR_ATTENUATION, 0.05)
         gl.glEnable(gl.GL_LIGHT0)
 
-        lightOnePosition = [6.,4.,10.,1.]
+        lightOnePosition = [6.,4.,10.,0]
         lightOneColor = [0.2,0.2,0.4,1.0] # blue-tinged shadows
         gl.glLightfv(gl.GL_LIGHT1, gl.GL_POSITION, lightOnePosition)
         gl.glLightfv(gl.GL_LIGHT1, gl.GL_AMBIENT, lightOneColor)

@@ -50,6 +50,9 @@ c .pyc
 | PYOPENGL_PLATFORM=osmesa python3 sphere.py
 c .pyc
 
+| PYOPENGL_PLATFORM=osmesa python3 falling.py
+c .pyc
+
 | PYOPENGL_PLATFORM=osmesa python3 cylinder.py
 c .pyc
 
