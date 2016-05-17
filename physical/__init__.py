@@ -1341,6 +1341,10 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
 def plot(color):
     """Create a plot object.
 
+    .. image :: figures/plot.png
+         :align: right
+
+
     Args:
         color: the color of the curve
     Raises:
@@ -1349,22 +1353,9 @@ def plot(color):
     This function returns a plot object.  You can add values to the
     plot as :math:`xy` pairs using code such as:
 
-    .. testsetup:: plot
-
-        from physical import *
-        t=0*second
-        dt = 0.01*second
-        mass=1*kg
-        v=1*meter/second
-
-    .. testcode :: plot
-
-        kinetic_energy = plot(color.red)
-        while t < 5*second:
-            kinetic_energy.plot(t, 0.5*mass*v**2)
-            v += 9.8*meter/second**2*dt
-            t += dt
-            timestep(dt)
+    .. literalinclude:: fig-plot.py
+        :start-after: start
+        :end-before: done
     """
     return __x.create_plot(color)
 

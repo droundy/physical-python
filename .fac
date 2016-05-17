@@ -35,3 +35,6 @@ c .pyc
 
 | PYOPENGL_PLATFORM=osmesa python3 box.py
 c .pyc
+
+| PYOPENGL_PLATFORM=osmesa python3 fig-plot.py
+c .pyc
