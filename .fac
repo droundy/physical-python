@@ -8,6 +8,7 @@
 < figures/cylinder.png
 < figures/box.png
 < figures/helix.png
+> html/index.html
 c .pyc
 c ~
 c .tum
@@ -16,9 +17,14 @@ c .inv
 c .pickle
 C _build/doctrees
 C .git
+C build
+C physical.egg-info
+C dist
 
-# run the doctests
-| PYOPENGL_PLATFORM=osmesa sphinx-build -b doctest -d _build/doctrees   . _build/doctest
+# Run the doctests.  Pretend to depend on index.html, since sphinx
+# isn't reentrant.
+| PYOPENGL_PLATFORM=osmesa sphinx-build -b doctest -d _build/doctrees . _build/doctest
+< html/index.html
 c .pyc
 c ~
 c .tum
@@ -28,6 +34,9 @@ c .pickle
 C _build/doctrees
 C .git
 C html
+C build
+C physical.egg-info
+C dist
 
 | python3 tests.py
 c .pyc
@@ -49,3 +58,29 @@ c .pyc
 
 | PYOPENGL_PLATFORM=osmesa python3 fig-plot.py
 c .pyc
+
+| python3 setup.py sdist
+c .pyc
+c ~
+c .tum
+c .js
+c .inv
+c .pickle
+C _build
+C html
+C physical.egg-info
+C build
+C dist
+
+| python3 setup.py bdist_wheel --universal
+c .pyc
+c ~
+c .tum
+c .js
+c .inv
+c .pickle
+C _build
+C html
+C physical.egg-info
+C build
+C dist

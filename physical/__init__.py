@@ -44,7 +44,7 @@ try:
 except:
     print('Using math instead of numpy, things may break')
     import math as numpy
-import os, sys, math, atexit, time, traceback
+import os, sys, math, atexit, time
 import functools
 
 import physical.color
@@ -1381,6 +1381,18 @@ def hline(y, color):
     return __x.create_hline(y, color)
 
 def savepng(fname):
+    '''Save the current image to a file.
+
+    This is useful for creating documentation, or for creating
+    instructional materials.  If you are using this command, you may
+    also be interested in rendering without displaying a window (for
+    scripting), which can be done with:
+
+    PYOPENGL_PLATFORM=osmesa python3 helix.py
+
+    provided you have libosmesa installed, and PyOpenGL >= 3.1.0.
+
+    '''
     __x._save(fname)
 
 #: the minimum frames per second that the renderer will draw.
