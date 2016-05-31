@@ -660,7 +660,7 @@ class _Trail(object):
         self.dash_time = dash_time
     def __str__(self):
         return 'trail(%s)' % (self.__object)
-    def _draw(self, t):
+    def _pass_time(self, t):
         if self.duration is not None:
             too_old = t - self.duration.v
             while len(self.__stats) > 1 and self.__stats[0][0] < too_old:
@@ -672,9 +672,12 @@ class _Trail(object):
             p = self.__object.pos
             if p != self.__stats[-1][1]:
                 self.__stats.append((t,p.copy()))
-            else:
-                print("rejecting", self.__object, "at", p,
-                      'versus', self.__stats[-1][1])
+            # else:
+            #     print("rejecting", self.__object, "at", p,
+            #           'versus', self.__stats[-1][1])
+    def _draw(self):
+        if self.__stats == []:
+            return
         if self.color is not None:
             c = self.color.rgb()
         else:
@@ -701,12 +704,15 @@ class _Sphere(object):
         self.color = color
     def __str__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
-    def _draw(self, t):
+    def _pass_time(self,t):
+        pass
+    def _draw(self):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         # position object
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
-        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,self.color.rgb())
+        c = self.color.rgb()
+        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,c)
         check_units('radius must have dimensions of distance', self.radius, meter)
         q = glu.gluNewQuadric()
         glu.gluSphere(q, value(self.radius), 60, 60)
@@ -722,7 +728,9 @@ class _Helix(object):
         self.radius = radius
         self.color = color
         self.twists = twists
-    def _draw(self, t):
+    def _pass_time(self,t):
+        pass
+    def _draw(self):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         gle.gleSetJoinStyle (gle.TUBE_NORM_EDGE | gle.TUBE_JN_ANGLE | gle.TUBE_JN_CAP)
@@ -767,7 +775,9 @@ class _Cylinder(object):
         self.pos2 = pos2
         self.radius = radius
         self.color = color
-    def _draw(self, t):
+    def _pass_time(self,t):
+        pass
+    def _draw(self):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         gle.gleSetJoinStyle (gle.TUBE_NORM_EDGE | gle.TUBE_JN_ANGLE | gle.TUBE_JN_CAP)
@@ -815,7 +825,9 @@ class _Box(object):
         self.wy = wy
         self.wz = wz
         self.color = color
-    def _draw(self, t):
+    def _pass_time(self,t):
+        pass
+    def _draw(self):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         # position object
@@ -966,7 +978,8 @@ class __display(object):
         gl.glEnable(gl.GL_LIGHT1)
 
         for o in self.__objects:
-            o._draw(self.__current_time)
+            o._pass_time(self.__current_time)
+            o._draw()
 
         gl.glPopMatrix()
 
@@ -1062,7 +1075,8 @@ class __display(object):
                 osmesa.OSMesaMakeCurrent(ctx, self.__buf, gl.GL_UNSIGNED_BYTE,
                                          ws[0], ws[1])
                 def nullpost():
-                    pass
+                    for o in self.__objects:
+                        o._pass_time(self.__current_time)
                 self.__glutPostRedisplay = nullpost
                 self.__glutMainLoopEvent = nullpost
             else:
@@ -1127,8 +1141,8 @@ class __display(object):
         self.__plots.append(s)
         self.init()
         return s
-    def create_trail(self, object):
-        s = _Trail(object)
+    def create_trail(self, object, duration, dash_time):
+        s = _Trail(object, duration=duration, dash_time=dash_time)
         self.__objects.append(s)
         self.init()
         return s
@@ -1398,26 +1412,24 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
                 pos, wx, wy, wz, meter)
     return __x.create_box(pos, wx, wy, wz, color.copy())
 
-def trail(object):
-    """Create a box object.
+def trail(object, duration=None, dash_time=0.2*second):
+    """Add a trail to an object.
 
-    .. image :: figures/box.png
+    .. image :: figures/trail.png
          :align: right
 
     Args:
-        pos: the initial position of the center of the box
-        wx: the width of the box in the x direction
-        wy: the width of the box in the y direction
-        wz: the width of the box in the z direction
-        color: the color of the cylinder
+        object: the object that is trailed, which must have a "pos" attribute
+        duration: how long in seconds the trail should last before disappearing
+        dash_time: time between when the trail turns on and off, leading to a dashed-line effect
     Raises:
-        Exception: the dimensions are not distances
+        Exception: the duration or dash_time are not times.
 
-    .. literalinclude:: box.py
+    .. literalinclude:: trail.py
         :start-after: start
         :end-before: done
     """
-    return __x.create_trail(object)
+    return __x.create_trail(object, duration, dash_time)
 
 def plot(color):
     """Create a plot object.
