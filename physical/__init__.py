@@ -29,6 +29,7 @@ __all__ = ('vector',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'pi',
            'sphere', 'helix', 'cylinder', 'box',
+           'trail',
            'plot', 'hline',
            'timestep', 'savepng',
            'minimum_fps', 'exit_visualization',
@@ -647,6 +648,51 @@ class _Hline(object):
         gl.glVertex2f( 1, y_on_screen);
         gl.glEnd()
 
+class _Trail(object):
+    def __init__(self, object, color=None, duration=None, dash_time=0.2*second):
+        check_units('dash_time must be a time', dash_time, second)
+        if duration is not None:
+            check_units('duration must be a time', duration, second)
+        self.__object = object
+        self.__stats = []
+        self.color = color
+        self.duration = duration
+        self.dash_time = dash_time
+    def __str__(self):
+        return 'trail(%s)' % (self.__object)
+    def _draw(self, t):
+        if self.duration is not None:
+            too_old = t - self.duration.v
+            while len(self.__stats) > 1 and self.__stats[0][0] < too_old:
+                self.__stats = self.__stats[2:]
+        if self.__stats == []:
+            self.__stats.append((t, self.__object.pos.copy()))
+            return
+        if t > max(self.__stats)[0] + self.dash_time.v:
+            p = self.__object.pos
+            if p != self.__stats[-1][1]:
+                self.__stats.append((t,p.copy()))
+            else:
+                print("rejecting", self.__object, "at", p,
+                      'versus', self.__stats[-1][1])
+        if self.color is not None:
+            c = self.color.rgb()
+        else:
+            c = self.__object.color.rgb()
+        gl.glColor3f(*c)
+        gl.glMaterialfv(gl.GL_FRONT_AND_BACK,gl.GL_EMISSION,c)
+        gl.glLineWidth(2.0)
+        gl.glBegin(gl.GL_LINES)
+        for i in range(1, len(self.__stats), 2):
+            old = self.__stats[i-1][1]
+            new = self.__stats[i][1]
+            gl.glVertex3f(old.x.v, old.y.v, old.z.v);
+            gl.glVertex3f(new.x.v, new.y.v, new.z.v);
+        gl.glEnd()
+        gl.glMaterialfv(gl.GL_FRONT_AND_BACK,gl.GL_EMISSION,(0,0,0))
+    def __repr__(self):
+        return str(self)
+
 class _Sphere(object):
     def __init__(self, pos, radius, color):
         check_units('position must have dimensions of distance', pos, meter)
@@ -655,7 +701,7 @@ class _Sphere(object):
         self.color = color
     def __str__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
-    def _draw(self):
+    def _draw(self, t):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         # position object
@@ -676,7 +722,7 @@ class _Helix(object):
         self.radius = radius
         self.color = color
         self.twists = twists
-    def _draw(self):
+    def _draw(self, t):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         gle.gleSetJoinStyle (gle.TUBE_NORM_EDGE | gle.TUBE_JN_ANGLE | gle.TUBE_JN_CAP)
@@ -721,7 +767,7 @@ class _Cylinder(object):
         self.pos2 = pos2
         self.radius = radius
         self.color = color
-    def _draw(self):
+    def _draw(self, t):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         gle.gleSetJoinStyle (gle.TUBE_NORM_EDGE | gle.TUBE_JN_ANGLE | gle.TUBE_JN_CAP)
@@ -769,7 +815,7 @@ class _Box(object):
         self.wy = wy
         self.wz = wz
         self.color = color
-    def _draw(self):
+    def _draw(self, t):
         # use a fresh transformation matrix
         gl.glPushMatrix()
         # position object
@@ -920,7 +966,7 @@ class __display(object):
         gl.glEnable(gl.GL_LIGHT1)
 
         for o in self.__objects:
-            o._draw()
+            o._draw(self.__current_time)
 
         gl.glPopMatrix()
 
@@ -1079,6 +1125,11 @@ class __display(object):
             raise Exception('plot must be given a color')
         s = _Hline(y, c, self)
         self.__plots.append(s)
+        self.init()
+        return s
+    def create_trail(self, object):
+        s = _Trail(object)
+        self.__objects.append(s)
         self.init()
         return s
     def create_sphere(self, pos, radius, color):
@@ -1346,6 +1397,27 @@ def box(pos, wx, wy, wz, color=color.RGB(1,1,1)):
     check_units('box dimensions must be distances',
                 pos, wx, wy, wz, meter)
     return __x.create_box(pos, wx, wy, wz, color.copy())
+
+def trail(object):
+    """Create a box object.
+
+    .. image :: figures/box.png
+         :align: right
+
+    Args:
+        pos: the initial position of the center of the box
+        wx: the width of the box in the x direction
+        wy: the width of the box in the y direction
+        wz: the width of the box in the z direction
+        color: the color of the cylinder
+    Raises:
+        Exception: the dimensions are not distances
+
+    .. literalinclude:: box.py
+        :start-after: start
+        :end-before: done
+    """
+    return __x.create_trail(object)
 
 def plot(color):
     """Create a plot object.

@@ -33,7 +33,12 @@ camera.range = 20*meter
 
 t = 0*second
 dt = 0.001*second
-omega = numpy.pi/second
+omega = numpy.pi/second/5
+
+tr = trail(s2)
+tr.duration = 3.5*second
+tr = trail(s)
+tr.duration = 3.25*second
 while t < 9.8*second:
     s.pos.x = 3*meter*sin(2*omega*t)
     s2.pos.z = 3*meter*cos(omega*t)
