@@ -24,7 +24,7 @@ messages and assignment semantics.
 from __future__ import division, print_function
 
 __all__ = ('vector',
-           'color',
+           'color', 'display',
            'check_units', 'dimensionless',
            'sqrt', 'exp', 'sin', 'cos', 'tan', 'atan2',
            'pi',
@@ -901,7 +901,7 @@ class __display(object):
         if self.__am_slow:
             gl.glClearColor(0.2,0.,0.,1.)
         else:
-            gl.glClearColor(0.,0.,0.,1.)
+            gl.glClearColor(self.__background[0],self.__background[1],self.__background[2],1.)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT|gl.GL_DEPTH_BUFFER_BIT)
 
         if len(self.__plots) > 0:
@@ -951,7 +951,7 @@ class __display(object):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         ws = camera.windowsize
-        glu.gluPerspective(40., ws[0]/ws[1], 1., 1000.)
+        glu.gluPerspective(4000., ws[0]/ws[1], 1., 10000.)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         gl.glPushMatrix()
@@ -1009,6 +1009,15 @@ class __display(object):
         self.__am_rotating = False
         self.__am_translating = False
         self.__am_slow = False
+        self.__background = color.black.rgb()
+    @property
+    def background(self):
+        '''the background color
+        '''
+        return color.RGB(self.__background[0], self.__background[1], self.__background[2])
+    @background.setter
+    def background(self, c):
+        self.__background = c.rgb()
 
     def __onMouse(self, btn, state, x, y):
         zoom_factor = 1.1
@@ -1264,6 +1273,7 @@ class Camera(object):
 
 camera = Camera()
 __x = __display()
+display = __x
 
 def timestep(dt):
     """Advance the simulation by time dt.
