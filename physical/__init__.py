@@ -284,6 +284,9 @@ class scalar(Units):
     def __eq__(self, b):
         return value(b) == self.v
     @units_match('can only compare values with same dimensions')
+    def __ne__(self, b):
+        return value(b) != self.v
+    @units_match('can only compare values with same dimensions')
     def __lt__(self, b):
         return self.v < value(b)
     @units_match('can only compare values with same dimensions')
@@ -702,6 +705,7 @@ class _Sphere(object):
         self.pos = pos
         self.radius = radius
         self.color = color
+        self.glows = False
     def __str__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
     def _pass_time(self,t):
@@ -712,11 +716,17 @@ class _Sphere(object):
         # position object
         gl.glTranslate(value(self.pos.x), value(self.pos.y), value(self.pos.z))
         c = self.color.rgb()
-        gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,c)
+        if self.glows:
+            gl.glMaterialfv(gl.GL_FRONT,gl.GL_EMISSION,c)
+            gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,(0,0,0))
+        else:
+            gl.glMaterialfv(gl.GL_FRONT,gl.GL_DIFFUSE,c)
         check_units('radius must have dimensions of distance', self.radius, meter)
         q = glu.gluNewQuadric()
         glu.gluSphere(q, value(self.radius), 60, 60)
         gl.glPopMatrix()
+        if self.glows:
+            gl.glMaterialfv(gl.GL_FRONT,gl.GL_EMISSION,(0,0,0))
     def __repr__(self):
         return 'sphere(%s, %s)' % (self.pos, self.radius)
 
@@ -951,7 +961,7 @@ class __display(object):
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
         ws = camera.windowsize
-        glu.gluPerspective(4000., ws[0]/ws[1], 1., 10000.)
+        glu.gluPerspective(400., ws[0]/ws[1], 1., 10000.)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
         gl.glPushMatrix()
