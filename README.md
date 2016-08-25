@@ -12,3 +12,7 @@ To install, (after you have installed python) run:
 
 You may be able to omit the "--user" above if you are installing as
 root, or are running Windows or MacOS.
+
+To use this package from source on a Debian system, install
+
+    apt-get install python3-opengl libgle3
